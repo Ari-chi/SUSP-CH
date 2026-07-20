@@ -1,0 +1,1297 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Finanzas · Personal + Negocio</title>
+<style>
+  :root{
+    --bg:#0f1117;
+    --card:#1a1d27;
+    --card2:#20242f;
+    --border:#2a2f3d;
+    --text:#e6e9ef;
+    --muted:#8a91a3;
+    --blue:#3b82f6;
+    --green:#22c55e;
+    --red:#ef4444;
+    --yellow:#eab308;
+    --accent:#3b82f6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    font-size:14px;
+    line-height:1.4;
+    -webkit-font-smoothing:antialiased;
+  }
+  /* Layout */
+  .app{display:flex;min-height:100vh}
+  .sidebar{
+    width:220px;background:var(--card);border-right:1px solid var(--border);
+    display:flex;flex-direction:column;position:sticky;top:0;height:100vh;flex-shrink:0;
+  }
+  .brand{padding:18px 18px 14px;font-weight:700;font-size:16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+  .brand .logo{width:26px;height:26px;border-radius:7px;background:linear-gradient(135deg,var(--blue),var(--green));display:flex;align-items:center;justify-content:center;font-size:15px}
+  .nav{flex:1;padding:10px 8px;overflow:auto}
+  .nav button{
+    width:100%;text-align:left;background:none;border:none;color:var(--muted);
+    padding:11px 12px;border-radius:9px;cursor:pointer;font-size:14px;display:flex;align-items:center;gap:11px;margin-bottom:2px;
+  }
+  .nav button:hover{background:var(--card2);color:var(--text)}
+  .nav button.active{background:var(--accent);color:#fff;font-weight:600}
+  .nav .ico{width:20px;text-align:center;font-size:16px}
+  .sb-foot{padding:12px;border-top:1px solid var(--border);font-size:11px;color:var(--muted)}
+  .main{flex:1;min-width:0;display:flex;flex-direction:column}
+  .topbar{
+    display:flex;align-items:center;gap:14px;padding:14px 22px;border-bottom:1px solid var(--border);
+    background:rgba(15,17,23,.85);backdrop-filter:blur(6px);position:sticky;top:0;z-index:20;flex-wrap:wrap;
+  }
+  .topbar h1{font-size:18px;font-weight:700}
+  .month-picker{display:flex;align-items:center;gap:6px;margin-left:auto}
+  .content{padding:22px;max-width:1400px;width:100%}
+  /* Controls */
+  input,select,textarea,button{font-family:inherit;font-size:14px}
+  input,select,textarea{
+    background:var(--card2);border:1px solid var(--border);color:var(--text);
+    padding:9px 11px;border-radius:8px;width:100%;
+  }
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
+  textarea{resize:vertical;min-height:60px}
+  label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;font-weight:500}
+  .btn{
+    background:var(--accent);color:#fff;border:none;padding:9px 15px;border-radius:8px;cursor:pointer;font-weight:600;width:auto;
+    display:inline-flex;align-items:center;gap:6px;
+  }
+  .btn:hover{filter:brightness(1.1)}
+  .btn.ghost{background:var(--card2);border:1px solid var(--border);color:var(--text)}
+  .btn.green{background:var(--green)}
+  .btn.red{background:var(--red)}
+  .btn.sm{padding:6px 10px;font-size:12px}
+  .btn-icon{background:none;border:none;color:var(--muted);cursor:pointer;padding:4px 7px;border-radius:6px;width:auto;font-size:14px}
+  .btn-icon:hover{background:var(--card2);color:var(--text)}
+  .btn-icon.danger:hover{color:var(--red)}
+  /* Cards & grid */
+  .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px}
+  .grid{display:grid;gap:16px}
+  .g2{grid-template-columns:repeat(2,1fr)}
+  .g3{grid-template-columns:repeat(3,1fr)}
+  .g4{grid-template-columns:repeat(4,1fr)}
+  .section-title{font-size:15px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+  .stat{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px 18px}
+  .stat .lbl{font-size:12px;color:var(--muted);margin-bottom:7px;display:flex;align-items:center;gap:6px}
+  .stat .val{font-size:24px;font-weight:700;letter-spacing:-.5px}
+  .stat .sub{font-size:11px;color:var(--muted);margin-top:4px}
+  .pos{color:var(--green)}
+  .neg{color:var(--red)}
+  .warn{color:var(--yellow)}
+  .muted{color:var(--muted)}
+  /* Tables */
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--border)}
+  th{color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.3px}
+  tbody tr:hover{background:var(--card2)}
+  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+  .table-wrap{overflow-x:auto}
+  .pill{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600}
+  .pill.ing{background:rgba(34,197,94,.15);color:var(--green)}
+  .pill.egr{background:rgba(239,68,68,.15);color:var(--red)}
+  .pill.per{background:rgba(59,130,246,.15);color:var(--blue)}
+  .pill.neg2{background:rgba(234,179,8,.15);color:var(--yellow)}
+  .badge{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;font-weight:700;font-size:14px}
+  .badge.win{background:rgba(34,197,94,.15);color:var(--green)}
+  .badge.loss{background:rgba(239,68,68,.15);color:var(--red)}
+  .dot{width:11px;height:11px;border-radius:3px;display:inline-block;flex-shrink:0}
+  .legend{display:flex;flex-direction:column;gap:7px;font-size:13px}
+  .legend .row{display:flex;align-items:center;gap:8px}
+  .legend .row .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .legend .row .pc{color:var(--muted);font-variant-numeric:tabular-nums}
+  .empty{text-align:center;color:var(--muted);padding:34px 20px}
+  .empty .big{font-size:40px;margin-bottom:10px;opacity:.6}
+  /* Modal */
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:100;padding:20px}
+  .overlay.open{display:flex}
+  .modal{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:22px;width:100%;max-width:480px;max-height:90vh;overflow:auto}
+  .modal h3{margin-bottom:16px;font-size:16px}
+  .field{margin-bottom:14px}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px}
+  /* group cards */
+  .group-card{background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:12px}
+  .group-head{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+  .group-head .nm{font-weight:700;font-size:14px;flex:1}
+  .sub-list{margin-top:8px;padding-left:26px;display:flex;flex-direction:column;gap:5px}
+  .sub-item{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
+  .sub-item .sn{flex:1}
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin-bottom:16px}
+  .toolbar .fld{min-width:130px}
+  canvas{max-width:100%}
+  .chart-wrap{display:flex;align-items:center;gap:20px;flex-wrap:wrap}
+  .expand-row{cursor:pointer}
+  .expand-row .caret{display:inline-block;width:14px;transition:transform .15s;color:var(--muted)}
+  .expand-row.open .caret{transform:rotate(90deg)}
+  .sub-rows td{background:var(--bg);font-size:12px}
+  .hint{font-size:11px;color:var(--muted);margin-top:5px}
+  .alert{padding:11px 14px;border-radius:10px;font-size:13px;display:flex;align-items:center;gap:9px;margin-bottom:14px}
+  .alert.warn{background:rgba(234,179,8,.12);border:1px solid rgba(234,179,8,.3);color:var(--yellow)}
+  .alert.ok{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.25);color:var(--green)}
+  .flex{display:flex;align-items:center;gap:10px}
+  .between{justify-content:space-between}
+  .wrap{flex-wrap:wrap}
+  .mt{margin-top:16px}
+  .mb{margin-bottom:16px}
+  .right{text-align:right}
+  .nowrap{white-space:nowrap}
+  .hamburger{display:none;background:none;border:none;color:var(--text);font-size:22px;cursor:pointer;width:auto}
+  @media(max-width:900px){
+    .sidebar{position:fixed;z-index:60;transform:translateX(-100%);transition:transform .2s}
+    .sidebar.open{transform:translateX(0)}
+    .hamburger{display:block}
+    .g4{grid-template-columns:repeat(2,1fr)}
+    .g3,.g2{grid-template-columns:1fr}
+    .backdrop{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:55;display:none}
+    .backdrop.open{display:block}
+  }
+  @media(max-width:560px){
+    .g4{grid-template-columns:1fr}
+    .content{padding:16px}
+    .row2{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand"><span class="logo">💰</span> Finanzas</div>
+    <nav class="nav" id="nav">
+      <button data-view="dashboard" class="active"><span class="ico">📊</span> Dashboard</button>
+      <button data-view="movimientos"><span class="ico">📝</span> Movimientos</button>
+      <button data-view="stock"><span class="ico">📦</span> Stock</button>
+      <button data-view="grupos"><span class="ico">🗂️</span> Grupos</button>
+      <button data-view="comparar"><span class="ico">⚖️</span> Comparar</button>
+      <button data-view="anual"><span class="ico">📈</span> Anual</button>
+      <button data-view="datos"><span class="ico">💾</span> Datos</button>
+    </nav>
+    <div class="sb-foot">Datos guardados en tu navegador.<br>Nada se envía a internet.</div>
+  </aside>
+  <div class="backdrop" id="backdrop"></div>
+
+  <main class="main">
+    <div class="topbar">
+      <button class="hamburger" id="hamburger">☰</button>
+      <h1 id="viewTitle">Dashboard</h1>
+      <div class="month-picker">
+        <button class="btn-icon" id="prevMonth" title="Mes anterior">◀</button>
+        <input type="month" id="globalMonth" style="width:160px">
+        <button class="btn-icon" id="nextMonth" title="Mes siguiente">▶</button>
+      </div>
+    </div>
+    <div class="content" id="content"></div>
+  </main>
+</div>
+
+<!-- Modal generic -->
+<div class="overlay" id="overlay">
+  <div class="modal" id="modal"></div>
+</div>
+
+<script>
+"use strict";
+/* ============================================================
+   Estado & persistencia
+   ============================================================ */
+const STORAGE_KEY = "finanzas_app_data";
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+
+const DEFAULT_COLORS = ["#3b82f6","#22c55e","#ef4444","#eab308","#a855f7","#06b6d4","#f97316","#ec4899","#14b8a6","#8b5cf6","#f43f5e","#84cc16"];
+
+function defaultData(){
+  const mk = (nombre,tipo,color,icono,subs)=>({
+    id:uid(),nombre,tipo,color,icono,
+    subgrupos:(subs||[]).map(s=>({id:uid(),nombre:s,notas:""}))
+  });
+  return {
+    grupos:[
+      mk("Alimentación","Personal","#22c55e","🍎",["Supermercado","Restaurantes","Otros"]),
+      mk("Servicios del hogar","Personal","#3b82f6","🏠",["Luz","Agua","Gas","Internet","Alquiler"]),
+      mk("Salud","Personal","#ef4444","⚕️",["Medicamentos","Consultas","Obra social"]),
+      mk("Transporte","Personal","#f97316","🚗",["Combustible","Transporte público","Mantenimiento"]),
+      mk("Entretenimiento","Personal","#a855f7","🎮",["Streaming","Salidas","Hobbies"]),
+      mk("Educación","Personal","#06b6d4","📚",["Cursos","Materiales"]),
+      mk("Otros personal","Personal","#8a91a3","📌",["Varios"]),
+      mk("Ingresos ventas","Negocio","#22c55e","💵",["Ventas mostrador","Ventas online","Servicios"]),
+      mk("Stock/mercadería","Negocio","#eab308","📦",["Compra mercadería","Insumos"]),
+      mk("Personal/sueldos","Negocio","#ef4444","👥",["Sueldos","Cargas sociales","Aguinaldo"]),
+      mk("Servicios negocio","Negocio","#3b82f6","🔌",["Luz","Alquiler local","Internet"]),
+      mk("Marketing","Negocio","#ec4899","📣",["Publicidad","Redes","Diseño"]),
+      mk("Gastos operativos","Negocio","#f97316","⚙️",["Impuestos","Comisiones","Mantenimiento"]),
+      mk("Otros negocio","Negocio","#8a91a3","📎",["Varios"])
+    ],
+    movimientos:[],
+    stock:{},
+    configuracion:{ moneda:"ARS", simbolo:"$", umbralStock:0 }
+  };
+}
+
+let data = load();
+function load(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return defaultData();
+    const d = JSON.parse(raw);
+    if(!d.grupos) d.grupos=[];
+    if(!d.movimientos) d.movimientos=[];
+    if(!d.stock) d.stock={};
+    if(!d.configuracion) d.configuracion={moneda:"ARS",simbolo:"$",umbralStock:0};
+    if(d.configuracion.umbralStock==null) d.configuracion.umbralStock=0;
+    return d;
+  }catch(e){
+    console.error("Error cargando datos",e);
+    return defaultData();
+  }
+}
+function save(){
+  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
+  catch(e){ alert("No se pudo guardar: "+e.message); }
+}
+
+/* ============================================================
+   Utilidades
+   ============================================================ */
+function fmt(n){
+  const s = data.configuracion.simbolo || "$";
+  const val = Number(n||0);
+  return s + " " + val.toLocaleString("es-AR",{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+function fmtNum(n){
+  return Number(n||0).toLocaleString("es-AR",{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+function pct(n){
+  if(n===Infinity) return "∞";
+  return (n>=0?"+":"") + Number(n||0).toFixed(1) + "%";
+}
+function esc(s){
+  return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function currentMonth(){
+  const d = new Date();
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
+}
+function monthLabel(ym){
+  if(!ym) return "";
+  const [y,m] = ym.split("-").map(Number);
+  const meses = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+  return meses[m-1] + " " + y;
+}
+function monthLabelLong(ym){
+  if(!ym) return "";
+  const [y,m] = ym.split("-").map(Number);
+  const meses = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+  return meses[m-1] + " " + y;
+}
+function shiftMonth(ym,delta){
+  let [y,m] = ym.split("-").map(Number);
+  m += delta;
+  while(m<1){m+=12;y--;}
+  while(m>12){m-=12;y++;}
+  return y+"-"+String(m).padStart(2,"0");
+}
+function grupoById(id){ return data.grupos.find(g=>g.id===id); }
+function subById(g,id){ return g && g.subgrupos.find(s=>s.id===id); }
+
+/* Stock consumido de un mes (entra como egreso del negocio) */
+function stockConsumido(ym){
+  const s = data.stock[ym];
+  if(!s) return 0;
+  const c = Number(s.inicial||0) - Number(s.final||0);
+  return c>0 ? c : 0; // solo consumo positivo cuenta como egreso
+}
+
+/* Cálculos de resumen para un mes */
+function calcMonth(ym){
+  const movs = data.movimientos.filter(m=>m.mes===ym);
+  const r = {
+    personal:{ing:0,egr:0}, negocio:{ing:0,egr:0},
+    porGrupo:{} // id -> {ing,egr,tipo}
+  };
+  movs.forEach(m=>{
+    const g = grupoById(m.grupoId);
+    const tipo = g ? g.tipo : "Personal";
+    const monto = Number(m.monto||0);
+    if(!r.porGrupo[m.grupoId]) r.porGrupo[m.grupoId]={ing:0,egr:0,tipo};
+    if(m.tipo==="Ingreso"){ r.porGrupo[m.grupoId].ing+=monto; r[tipo==="Negocio"?"negocio":"personal"].ing+=monto; }
+    else { r.porGrupo[m.grupoId].egr+=monto; r[tipo==="Negocio"?"negocio":"personal"].egr+=monto; }
+  });
+  const stockC = stockConsumido(ym);
+  r.stockConsumido = stockC;
+  r.personalBalance = r.personal.ing - r.personal.egr;
+  // negocio: resultado neto = ingresos - egresos operativos - stock consumido
+  r.negocioBruto = r.negocio.ing - r.negocio.egr; // sin stock
+  r.negocioNeto = r.negocio.ing - r.negocio.egr - stockC;
+  r.totalIngresos = r.personal.ing + r.negocio.ing;
+  r.totalEgresos = r.personal.egr + r.negocio.egr + stockC;
+  r.balanceGlobal = r.totalIngresos - r.totalEgresos;
+  return r;
+}
+
+/* ============================================================
+   Canvas helpers: torta, barras, líneas
+   ============================================================ */
+function drawPie(canvas, items, opts){
+  opts = opts||{};
+  const dpr = window.devicePixelRatio||1;
+  const size = opts.size||200;
+  canvas.width = size*dpr; canvas.height=size*dpr;
+  canvas.style.width=size+"px"; canvas.style.height=size+"px";
+  const ctx = canvas.getContext("2d");
+  ctx.scale(dpr,dpr);
+  ctx.clearRect(0,0,size,size);
+  const cx=size/2, cy=size/2, r=size/2-4, ir=opts.donut? r*0.58 : 0;
+  const total = items.reduce((a,b)=>a+b.value,0);
+  if(total<=0){
+    ctx.fillStyle="#2a2f3d";
+    ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);
+    if(ir){ctx.arc(cx,cy,ir,0,Math.PI*2,true);}
+    ctx.fill();
+    ctx.fillStyle="#8a91a3";ctx.font="12px sans-serif";ctx.textAlign="center";
+    ctx.fillText("Sin datos",cx,cy);
+    return;
+  }
+  let start=-Math.PI/2;
+  items.forEach(it=>{
+    if(it.value<=0) return;
+    const ang = it.value/total*Math.PI*2;
+    ctx.beginPath();
+    ctx.moveTo(cx,cy);
+    ctx.arc(cx,cy,r,start,start+ang);
+    ctx.closePath();
+    ctx.fillStyle=it.color;
+    ctx.fill();
+    start+=ang;
+  });
+  if(ir){
+    ctx.globalCompositeOperation="destination-out";
+    ctx.beginPath();ctx.arc(cx,cy,ir,0,Math.PI*2);ctx.fill();
+    ctx.globalCompositeOperation="source-over";
+    if(opts.centerText){
+      ctx.fillStyle="#e6e9ef";ctx.font="bold 15px sans-serif";ctx.textAlign="center";ctx.textBaseline="middle";
+      ctx.fillText(opts.centerText,cx,cy-7);
+      if(opts.centerSub){ctx.fillStyle="#8a91a3";ctx.font="11px sans-serif";ctx.fillText(opts.centerSub,cx,cy+11);}
+    }
+  }
+}
+
+function drawBars(canvas, groups, series, opts){
+  // groups: labels[]; series: [{name,color,values[]}]
+  opts=opts||{};
+  const dpr=window.devicePixelRatio||1;
+  const W=opts.width||canvas.clientWidth||600, H=opts.height||260;
+  canvas.width=W*dpr;canvas.height=H*dpr;
+  canvas.style.width="100%";canvas.style.height=H+"px";
+  const ctx=canvas.getContext("2d");ctx.scale(dpr,dpr);
+  ctx.clearRect(0,0,W,H);
+  const padL=54,padR=14,padT=14,padB=40;
+  const plotW=W-padL-padR, plotH=H-padT-padB;
+  let max=0;
+  groups.forEach((_,i)=>series.forEach(s=>{max=Math.max(max,Math.abs(s.values[i]||0));}));
+  if(max<=0) max=1;
+  const nice = niceMax(max);
+  // grid
+  ctx.strokeStyle="#2a2f3d";ctx.fillStyle="#8a91a3";ctx.font="10px sans-serif";ctx.lineWidth=1;
+  const lines=4;
+  for(let i=0;i<=lines;i++){
+    const y=padT+plotH-(plotH*i/lines);
+    ctx.beginPath();ctx.moveTo(padL,y);ctx.lineTo(W-padR,y);ctx.stroke();
+    ctx.textAlign="right";ctx.textBaseline="middle";
+    ctx.fillText(shortNum(nice*i/lines),padL-6,y);
+  }
+  const gCount=groups.length;
+  const gw = plotW/gCount;
+  const sCount=series.length;
+  const bw = Math.min(38, gw/(sCount+0.6));
+  groups.forEach((label,gi)=>{
+    const gx=padL+gi*gw;
+    series.forEach((s,si)=>{
+      const v=s.values[gi]||0;
+      const h=Math.abs(v)/nice*plotH;
+      const bx=gx+(gw-bw*sCount)/2+si*bw;
+      const by=padT+plotH-h;
+      ctx.fillStyle=v<0?"#ef4444":s.color;
+      ctx.fillRect(bx,by,bw-3,h);
+    });
+    ctx.fillStyle="#8a91a3";ctx.font="10px sans-serif";ctx.textAlign="center";ctx.textBaseline="top";
+    const lbl = label.length>9?label.slice(0,8)+"…":label;
+    ctx.fillText(lbl,gx+gw/2,padT+plotH+6);
+  });
+}
+
+function drawLines(canvas, labels, series, opts){
+  opts=opts||{};
+  const dpr=window.devicePixelRatio||1;
+  const W=opts.width||canvas.clientWidth||600, H=opts.height||280;
+  canvas.width=W*dpr;canvas.height=H*dpr;
+  canvas.style.width="100%";canvas.style.height=H+"px";
+  const ctx=canvas.getContext("2d");ctx.scale(dpr,dpr);
+  ctx.clearRect(0,0,W,H);
+  const padL=56,padR=14,padT=14,padB=34;
+  const plotW=W-padL-padR, plotH=H-padT-padB;
+  let max=0,min=0;
+  series.forEach(s=>s.values.forEach(v=>{max=Math.max(max,v);min=Math.min(min,v);}));
+  if(max===0&&min===0){max=1;}
+  const niceH=niceMax(Math.max(Math.abs(max),1));
+  const niceL=min<0?-niceMax(Math.abs(min)):0;
+  const range=niceH-niceL || 1;
+  const yOf=v=>padT+plotH-((v-niceL)/range*plotH);
+  // grid
+  ctx.strokeStyle="#2a2f3d";ctx.fillStyle="#8a91a3";ctx.font="10px sans-serif";ctx.lineWidth=1;
+  const lines=4;
+  for(let i=0;i<=lines;i++){
+    const val=niceL+(range*i/lines);
+    const y=yOf(val);
+    ctx.beginPath();ctx.moveTo(padL,y);ctx.lineTo(W-padR,y);ctx.stroke();
+    ctx.textAlign="right";ctx.textBaseline="middle";ctx.fillText(shortNum(val),padL-6,y);
+  }
+  // zero line
+  if(niceL<0){
+    const zy=yOf(0);ctx.strokeStyle="#4a5163";ctx.beginPath();ctx.moveTo(padL,zy);ctx.lineTo(W-padR,zy);ctx.stroke();
+  }
+  const n=labels.length;
+  const xOf=i=>padL+(n<=1?plotW/2:plotW*i/(n-1));
+  series.forEach(s=>{
+    ctx.strokeStyle=s.color;ctx.lineWidth=2;ctx.beginPath();
+    s.values.forEach((v,i)=>{i===0?ctx.moveTo(xOf(i),yOf(v)):ctx.lineTo(xOf(i),yOf(v));});
+    ctx.stroke();
+    ctx.fillStyle=s.color;
+    s.values.forEach((v,i)=>{ctx.beginPath();ctx.arc(xOf(i),yOf(v),2.5,0,Math.PI*2);ctx.fill();});
+  });
+  ctx.fillStyle="#8a91a3";ctx.font="10px sans-serif";ctx.textAlign="center";ctx.textBaseline="top";
+  labels.forEach((l,i)=>{
+    if(n>12 && i%2!==0) return;
+    ctx.fillText(l,xOf(i),padT+plotH+6);
+  });
+}
+function niceMax(v){
+  if(v<=0) return 1;
+  const mag=Math.pow(10,Math.floor(Math.log10(v)));
+  const norm=v/mag;
+  let nice;
+  if(norm<=1)nice=1;else if(norm<=2)nice=2;else if(norm<=5)nice=5;else nice=10;
+  return nice*mag;
+}
+function shortNum(v){
+  const a=Math.abs(v);
+  if(a>=1e6) return (v/1e6).toFixed(1).replace(/\.0$/,"")+"M";
+  if(a>=1e3) return (v/1e3).toFixed(1).replace(/\.0$/,"")+"k";
+  return String(Math.round(v));
+}
+
+/* ============================================================
+   Navegación
+   ============================================================ */
+let selectedMonth = currentMonth();
+let currentView = "dashboard";
+const VIEW_TITLES = {dashboard:"Dashboard",movimientos:"Movimientos",stock:"Stock (Negocio)",grupos:"Grupos y Subgrupos",comparar:"Comparación Mensual",anual:"Comparación Anual",datos:"Datos y Backup"};
+
+function setView(v){
+  currentView=v;
+  document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("active",b.dataset.view===v));
+  document.getElementById("viewTitle").textContent=VIEW_TITLES[v]||v;
+  render();
+  closeSidebar();
+}
+function render(){
+  const c=document.getElementById("content");
+  c.innerHTML="";
+  ({dashboard:renderDashboard,movimientos:renderMovimientos,stock:renderStock,grupos:renderGrupos,comparar:renderComparar,anual:renderAnual,datos:renderDatos}[currentView]||renderDashboard)(c);
+}
+
+/* ============================================================
+   Vista: Dashboard
+   ============================================================ */
+function renderDashboard(c){
+  const ym=selectedMonth;
+  const r=calcMonth(ym);
+  const win=r.balanceGlobal>=0;
+
+  const wrap=document.createElement("div");
+  wrap.innerHTML=`
+    <div class="flex between wrap mb">
+      <div class="section-title" style="margin:0">📅 ${monthLabelLong(ym)}</div>
+      <div class="badge ${win?'win':'loss'}">${win?'🟢 Ganancia':'🔴 Pérdida'} ${fmt(Math.abs(r.balanceGlobal))}</div>
+    </div>
+    <div class="grid g4 mb">
+      <div class="stat"><div class="lbl">👤 Total personal (egresos)</div><div class="val">${fmt(r.personal.egr)}</div><div class="sub">Ingresos: ${fmt(r.personal.ing)}</div></div>
+      <div class="stat"><div class="lbl">🏢 Resultado negocio</div><div class="val ${r.negocioNeto>=0?'pos':'neg'}">${fmt(r.negocioNeto)}</div><div class="sub">Ventas: ${fmt(r.negocio.ing)}</div></div>
+      <div class="stat"><div class="lbl">⚖️ Balance global</div><div class="val ${win?'pos':'neg'}">${fmt(r.balanceGlobal)}</div><div class="sub">Ing ${fmt(r.totalIngresos)} · Egr ${fmt(r.totalEgresos)}</div></div>
+      <div class="stat"><div class="lbl">📦 Stock consumido</div><div class="val warn">${fmt(r.stockConsumido)}</div><div class="sub">Cuenta como egreso negocio</div></div>
+    </div>
+    <div class="grid g2">
+      <div class="card">
+        <div class="section-title">🥧 Resumen global (Personal + Negocio)</div>
+        <div class="chart-wrap">
+          <canvas id="pieGlobal"></canvas>
+          <div class="legend" id="legendGlobal" style="flex:1;min-width:160px"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="section-title">🏢 Desglose del negocio</div>
+        <div class="chart-wrap">
+          <canvas id="pieNeg"></canvas>
+          <div class="legend" id="legendNeg" style="flex:1;min-width:160px"></div>
+        </div>
+      </div>
+    </div>`;
+  c.appendChild(wrap);
+
+  // Pie global: egresos por grupo (todos los grupos con egreso) + stock
+  const globalItems=[];
+  data.grupos.forEach((g,i)=>{
+    const gg=r.porGrupo[g.id];
+    if(gg && gg.egr>0) globalItems.push({label:(g.icono||"")+" "+g.nombre,value:gg.egr,color:g.color||DEFAULT_COLORS[i%DEFAULT_COLORS.length]});
+  });
+  if(r.stockConsumido>0) globalItems.push({label:"📦 Stock consumido",value:r.stockConsumido,color:"#eab308"});
+  globalItems.sort((a,b)=>b.value-a.value);
+  drawPie(document.getElementById("pieGlobal"),globalItems,{size:200,donut:true,centerText:fmt(r.totalEgresos),centerSub:"egresos"});
+  renderLegend("legendGlobal",globalItems);
+
+  // Pie negocio: ingresos, egresos operativos, stock consumido, y resultado
+  const negItems=[
+    {label:"Ingresos (ventas)",value:r.negocio.ing,color:"#22c55e"},
+    {label:"Egresos operativos",value:r.negocio.egr,color:"#ef4444"},
+    {label:"Stock consumido",value:r.stockConsumido,color:"#eab308"}
+  ].filter(x=>x.value>0);
+  drawPie(document.getElementById("pieNeg"),negItems,{size:200,donut:true,centerText:fmt(r.negocioNeto),centerSub:"neto"});
+  renderLegend("legendNeg",negItems);
+}
+function renderLegend(id,items){
+  const el=document.getElementById(id);
+  const total=items.reduce((a,b)=>a+b.value,0);
+  if(!items.length){el.innerHTML='<div class="muted">Sin datos este mes.</div>';return;}
+  el.innerHTML=items.map(it=>`
+    <div class="row">
+      <span class="dot" style="background:${it.color}"></span>
+      <span class="nm">${esc(it.label)}</span>
+      <span class="pc">${fmt(it.value)} · ${total>0?(it.value/total*100).toFixed(1):0}%</span>
+    </div>`).join("");
+}
+
+/* ============================================================
+   Vista: Movimientos
+   ============================================================ */
+let movFilters={grupo:"",tipo:"",desde:"",hasta:""};
+function renderMovimientos(c){
+  const ym=selectedMonth;
+  const box=document.createElement("div");
+  box.innerHTML=`
+    <div class="flex between wrap mb">
+      <div class="section-title" style="margin:0">📝 Movimientos · ${monthLabelLong(ym)}</div>
+      <button class="btn" id="addMov">➕ Nuevo movimiento</button>
+    </div>
+    <div class="card mb">
+      <div class="toolbar" style="margin:0">
+        <div class="fld"><label>Grupo</label><select id="fGrupo"></select></div>
+        <div class="fld"><label>Tipo</label><select id="fTipo"><option value="">Todos</option><option>Ingreso</option><option>Egreso</option></select></div>
+        <div class="fld"><label>Desde</label><input type="date" id="fDesde"></div>
+        <div class="fld"><label>Hasta</label><input type="date" id="fHasta"></div>
+        <button class="btn ghost sm" id="clearFilters">Limpiar</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="table-wrap"><table>
+        <thead><tr>
+          <th>Fecha</th><th>Tipo</th><th>Grupo</th><th>Subgrupo</th><th>Concepto</th><th class="num">Monto</th><th></th>
+        </tr></thead>
+        <tbody id="movBody"></tbody>
+      </table></div>
+    </div>`;
+  c.appendChild(box);
+
+  // filtro grupo options
+  const fG=box.querySelector("#fGrupo");
+  fG.innerHTML='<option value="">Todos los grupos</option>'+data.grupos.map(g=>`<option value="${g.id}">${esc((g.icono||"")+" "+g.nombre)} (${g.tipo})</option>`).join("");
+  fG.value=movFilters.grupo;
+  box.querySelector("#fTipo").value=movFilters.tipo;
+  box.querySelector("#fDesde").value=movFilters.desde;
+  box.querySelector("#fHasta").value=movFilters.hasta;
+
+  fG.onchange=e=>{movFilters.grupo=e.target.value;drawMovTable();};
+  box.querySelector("#fTipo").onchange=e=>{movFilters.tipo=e.target.value;drawMovTable();};
+  box.querySelector("#fDesde").onchange=e=>{movFilters.desde=e.target.value;drawMovTable();};
+  box.querySelector("#fHasta").onchange=e=>{movFilters.hasta=e.target.value;drawMovTable();};
+  box.querySelector("#clearFilters").onclick=()=>{movFilters={grupo:"",tipo:"",desde:"",hasta:""};renderMovimientos(c);};
+  box.querySelector("#addMov").onclick=()=>openMovModal();
+
+  drawMovTable();
+}
+function filteredMovs(){
+  return data.movimientos.filter(m=>{
+    if(m.mes!==selectedMonth) return false;
+    if(movFilters.grupo && m.grupoId!==movFilters.grupo) return false;
+    if(movFilters.tipo && m.tipo!==movFilters.tipo) return false;
+    if(movFilters.desde && m.fecha<movFilters.desde) return false;
+    if(movFilters.hasta && m.fecha>movFilters.hasta) return false;
+    return true;
+  }).sort((a,b)=>(a.fecha<b.fecha?1:a.fecha>b.fecha?-1:0));
+}
+function drawMovTable(){
+  const body=document.getElementById("movBody");
+  if(!body) return;
+  const movs=filteredMovs();
+  if(!movs.length){
+    body.innerHTML=`<tr><td colspan="7"><div class="empty"><div class="big">🗒️</div>No hay movimientos con estos filtros.<br>Cargá uno con "Nuevo movimiento".</div></td></tr>`;
+    return;
+  }
+  body.innerHTML=movs.map(m=>{
+    const g=grupoById(m.grupoId);
+    const s=subById(g,m.subgrupoId);
+    return `<tr>
+      <td class="nowrap">${esc(m.fecha)}</td>
+      <td><span class="pill ${m.tipo==="Ingreso"?"ing":"egr"}">${m.tipo}</span></td>
+      <td>${g?esc((g.icono||"")+" "+g.nombre):'<span class="muted">?</span>'} <span class="pill ${g&&g.tipo==='Negocio'?'neg2':'per'}" style="margin-left:4px">${g?g.tipo:''}</span></td>
+      <td>${s?esc(s.nombre):'<span class="muted">—</span>'}</td>
+      <td>${esc(m.concepto||"")}${m.detalle?`<div class="hint">${esc(m.detalle)}</div>`:""}</td>
+      <td class="num ${m.tipo==="Ingreso"?"pos":"neg"}">${m.tipo==="Ingreso"?"+":"−"}${fmt(m.monto)}</td>
+      <td class="right nowrap">
+        <button class="btn-icon" data-edit="${m.id}" title="Editar">✏️</button>
+        <button class="btn-icon danger" data-del="${m.id}" title="Eliminar">🗑️</button>
+      </td>
+    </tr>`;
+  }).join("");
+  body.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{
+    if(confirm("¿Eliminar este movimiento?")){
+      data.movimientos=data.movimientos.filter(x=>x.id!==b.dataset.del);
+      save();drawMovTable();
+    }
+  });
+  body.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>openMovModal(b.dataset.edit));
+}
+
+function openMovModal(id){
+  const editing = id ? data.movimientos.find(m=>m.id===id) : null;
+  const m = editing || {tipo:"Egreso",fecha:selectedMonth+"-"+String(new Date().getDate()).padStart(2,"0"),mes:selectedMonth,grupoId:"",subgrupoId:"",concepto:"",detalle:"",monto:""};
+  openModal(`
+    <h3>${editing?"Editar":"Nuevo"} movimiento</h3>
+    <div class="row2">
+      <div class="field"><label>Fecha</label><input type="date" id="mFecha" value="${esc(m.fecha)}"></div>
+      <div class="field"><label>Mes/Año (pertenece)</label><input type="month" id="mMes" value="${esc(m.mes)}"></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>Tipo</label><select id="mTipo"><option ${m.tipo==="Ingreso"?"selected":""}>Ingreso</option><option ${m.tipo==="Egreso"?"selected":""}>Egreso</option></select></div>
+      <div class="field"><label>Monto</label><input type="number" step="0.01" id="mMonto" value="${esc(m.monto)}" placeholder="0.00"></div>
+    </div>
+    <div class="field"><label>Grupo</label><select id="mGrupo"></select></div>
+    <div class="field"><label>Subgrupo</label><select id="mSub"></select></div>
+    <div class="field"><label>Concepto / descripción</label><input id="mConcepto" value="${esc(m.concepto)}" placeholder="Ej: Compra semanal"></div>
+    <div class="field"><label>Detalle adicional (opcional)</label><textarea id="mDetalle" placeholder="Notas...">${esc(m.detalle||"")}</textarea></div>
+    <div class="modal-actions">
+      <button class="btn ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn green" id="saveMov">Guardar</button>
+    </div>
+  `);
+  const gSel=document.getElementById("mGrupo");
+  const sSel=document.getElementById("mSub");
+  function fillGroups(){
+    gSel.innerHTML='<option value="">— Elegí grupo —</option>'+
+      ["Personal","Negocio"].map(t=>{
+        const gs=data.grupos.filter(g=>g.tipo===t);
+        if(!gs.length) return "";
+        return `<optgroup label="${t}">`+gs.map(g=>`<option value="${g.id}" ${g.id===m.grupoId?"selected":""}>${esc((g.icono||"")+" "+g.nombre)}</option>`).join("")+`</optgroup>`;
+      }).join("");
+  }
+  function fillSubs(){
+    const g=grupoById(gSel.value);
+    sSel.innerHTML='<option value="">— (sin subgrupo) —</option>'+(g?g.subgrupos.map(s=>`<option value="${s.id}" ${s.id===m.subgrupoId?"selected":""}>${esc(s.nombre)}</option>`).join(""):"");
+  }
+  fillGroups();fillSubs();
+  gSel.onchange=fillSubs;
+  document.getElementById("saveMov").onclick=()=>{
+    const rec={
+      id: editing?editing.id:uid(),
+      fecha: document.getElementById("mFecha").value,
+      mes: document.getElementById("mMes").value,
+      tipo: document.getElementById("mTipo").value,
+      grupoId: gSel.value,
+      subgrupoId: sSel.value,
+      concepto: document.getElementById("mConcepto").value.trim(),
+      detalle: document.getElementById("mDetalle").value.trim(),
+      monto: parseFloat(document.getElementById("mMonto").value)||0
+    };
+    if(!rec.grupoId){alert("Elegí un grupo.");return;}
+    if(!rec.mes){alert("Indicá el mes/año.");return;}
+    if(!rec.monto||rec.monto<=0){alert("Ingresá un monto válido.");return;}
+    if(!rec.fecha) rec.fecha=rec.mes+"-01";
+    if(editing){ Object.assign(editing,rec); }
+    else data.movimientos.push(rec);
+    save();closeModal();
+    render();
+  };
+}
+
+/* ============================================================
+   Vista: Stock
+   ============================================================ */
+function renderStock(c){
+  const ym=selectedMonth;
+  const s=data.stock[ym]||{inicial:0,final:0};
+  const consumido=stockConsumido(ym);
+  const umbral=Number(data.configuracion.umbralStock||0);
+  const alerta = umbral>0 && consumido>umbral;
+  const box=document.createElement("div");
+  box.innerHTML=`
+    <div class="section-title">📦 Stock del negocio · ${monthLabelLong(ym)}</div>
+    ${alerta?`<div class="alert warn">⚠️ El stock consumido (${fmt(consumido)}) supera el umbral configurado (${fmt(umbral)}).</div>`:""}
+    <div class="grid g2">
+      <div class="card">
+        <div class="row2">
+          <div class="field"><label>Stock inicial del mes</label><input type="number" step="0.01" id="stInicial" value="${s.inicial||0}"></div>
+          <div class="field"><label>Stock final del mes</label><input type="number" step="0.01" id="stFinal" value="${s.final||0}"></div>
+        </div>
+        <div class="field"><label>Umbral de alerta (0 = sin alerta)</label><input type="number" step="0.01" id="stUmbral" value="${umbral}"></div>
+        <button class="btn green" id="saveStock">💾 Guardar stock</button>
+        <p class="hint">El stock consumido (inicial − final) se computa como egreso en el resultado del negocio.</p>
+      </div>
+      <div class="grid" style="gap:16px;align-content:start">
+        <div class="stat"><div class="lbl">📥 Stock inicial</div><div class="val">${fmt(s.inicial)}</div></div>
+        <div class="stat"><div class="lbl">📤 Stock final</div><div class="val">${fmt(s.final)}</div></div>
+        <div class="stat"><div class="lbl">🔥 Stock consumido</div><div class="val ${consumido>0?'warn':'muted'}">${fmt(consumido)}</div><div class="sub">${consumido>0?'Se está consumiendo mercadería':'Sin consumo neto (o reposición)'}</div></div>
+      </div>
+    </div>`;
+  c.appendChild(box);
+  document.getElementById("saveStock").onclick=()=>{
+    data.stock[ym]={
+      inicial:parseFloat(document.getElementById("stInicial").value)||0,
+      final:parseFloat(document.getElementById("stFinal").value)||0
+    };
+    data.configuracion.umbralStock=parseFloat(document.getElementById("stUmbral").value)||0;
+    save();renderStock(c);
+  };
+}
+
+/* ============================================================
+   Vista: Grupos
+   ============================================================ */
+function renderGrupos(c){
+  const box=document.createElement("div");
+  box.innerHTML=`
+    <div class="flex between wrap mb">
+      <div class="section-title" style="margin:0">🗂️ Grupos y subgrupos</div>
+      <button class="btn" id="addGrupo">➕ Nuevo grupo</button>
+    </div>
+    <div class="grid g2" id="grpCols"></div>`;
+  c.appendChild(box);
+  const cols=box.querySelector("#grpCols");
+  ["Personal","Negocio"].forEach(tipo=>{
+    const col=document.createElement("div");
+    const gs=data.grupos.filter(g=>g.tipo===tipo);
+    col.innerHTML=`<div class="card"><div class="section-title">${tipo==="Personal"?"👤":"🏢"} ${tipo} <span class="muted" style="font-weight:400">(${gs.length})</span></div><div id="col-${tipo}"></div></div>`;
+    cols.appendChild(col);
+    const host=col.querySelector("#col-"+tipo);
+    if(!gs.length){host.innerHTML='<div class="empty">Sin grupos.</div>';}
+    gs.forEach(g=>{
+      const card=document.createElement("div");
+      card.className="group-card";
+      card.innerHTML=`
+        <div class="group-head">
+          <span class="dot" style="background:${g.color};width:16px;height:16px"></span>
+          <span style="font-size:16px">${esc(g.icono||"")}</span>
+          <span class="nm">${esc(g.nombre)}</span>
+          <button class="btn-icon" data-editg="${g.id}" title="Editar grupo">✏️</button>
+          <button class="btn-icon danger" data-delg="${g.id}" title="Eliminar grupo">🗑️</button>
+        </div>
+        <div class="sub-list" id="subs-${g.id}"></div>
+        <button class="btn ghost sm mt" data-addsub="${g.id}">＋ Subgrupo</button>`;
+      host.appendChild(card);
+      const sl=card.querySelector("#subs-"+g.id);
+      if(!g.subgrupos.length){sl.innerHTML='<div class="sub-item">Sin subgrupos</div>';}
+      g.subgrupos.forEach(s=>{
+        const row=document.createElement("div");
+        row.className="sub-item";
+        row.innerHTML=`<span>•</span><span class="sn">${esc(s.nombre)}${s.notas?` <span class="muted">— ${esc(s.notas)}</span>`:""}</span>
+          <button class="btn-icon" data-edits="${g.id}|${s.id}" title="Editar">✏️</button>
+          <button class="btn-icon danger" data-dels="${g.id}|${s.id}" title="Eliminar">🗑️</button>`;
+        sl.appendChild(row);
+      });
+    });
+  });
+
+  box.querySelector("#addGrupo").onclick=()=>openGrupoModal();
+  box.querySelectorAll("[data-editg]").forEach(b=>b.onclick=()=>openGrupoModal(b.dataset.editg));
+  box.querySelectorAll("[data-delg]").forEach(b=>b.onclick=()=>{
+    const g=grupoById(b.dataset.delg);
+    const used=data.movimientos.filter(m=>m.grupoId===g.id).length;
+    if(confirm(`¿Eliminar el grupo "${g.nombre}"?`+(used?`\n\nHay ${used} movimiento(s) asociados que quedarán sin grupo.`:""))){
+      data.grupos=data.grupos.filter(x=>x.id!==g.id);
+      save();renderGrupos(c);
+    }
+  });
+  box.querySelectorAll("[data-addsub]").forEach(b=>b.onclick=()=>openSubModal(b.dataset.addsub));
+  box.querySelectorAll("[data-edits]").forEach(b=>b.onclick=()=>{const[gid,sid]=b.dataset.edits.split("|");openSubModal(gid,sid);});
+  box.querySelectorAll("[data-dels]").forEach(b=>b.onclick=()=>{
+    const[gid,sid]=b.dataset.dels.split("|");
+    const g=grupoById(gid);
+    if(confirm("¿Eliminar subgrupo?")){
+      g.subgrupos=g.subgrupos.filter(s=>s.id!==sid);
+      save();renderGrupos(c);
+    }
+  });
+}
+function openGrupoModal(id){
+  const editing=id?grupoById(id):null;
+  const g=editing||{nombre:"",tipo:"Personal",color:DEFAULT_COLORS[data.grupos.length%DEFAULT_COLORS.length],icono:""};
+  openModal(`
+    <h3>${editing?"Editar":"Nuevo"} grupo</h3>
+    <div class="field"><label>Nombre</label><input id="gNombre" value="${esc(g.nombre)}" placeholder="Ej: Alimentación"></div>
+    <div class="row2">
+      <div class="field"><label>Tipo</label><select id="gTipo"><option ${g.tipo==="Personal"?"selected":""}>Personal</option><option ${g.tipo==="Negocio"?"selected":""}>Negocio</option></select></div>
+      <div class="field"><label>Icono (emoji)</label><input id="gIcono" value="${esc(g.icono||"")}" placeholder="🍎" maxlength="4"></div>
+    </div>
+    <div class="field"><label>Color</label>
+      <div class="flex wrap" id="colorPick" style="gap:8px">
+        ${DEFAULT_COLORS.map(col=>`<span class="dot pick" data-col="${col}" style="width:26px;height:26px;background:${col};cursor:pointer;border:2px solid ${col===g.color?'#fff':'transparent'}"></span>`).join("")}
+        <input type="color" id="gColor" value="${g.color}" style="width:44px;height:32px;padding:2px">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn green" id="saveGrupo">Guardar</button>
+    </div>
+  `);
+  const colorInput=document.getElementById("gColor");
+  document.querySelectorAll("#colorPick .pick").forEach(p=>p.onclick=()=>{
+    colorInput.value=p.dataset.col;
+    document.querySelectorAll("#colorPick .pick").forEach(x=>x.style.border="2px solid transparent");
+    p.style.border="2px solid #fff";
+  });
+  document.getElementById("saveGrupo").onclick=()=>{
+    const nombre=document.getElementById("gNombre").value.trim();
+    if(!nombre){alert("Poné un nombre.");return;}
+    const rec={nombre,tipo:document.getElementById("gTipo").value,color:colorInput.value,icono:document.getElementById("gIcono").value.trim()};
+    if(editing){Object.assign(editing,rec);}
+    else data.grupos.push({id:uid(),...rec,subgrupos:[]});
+    save();closeModal();render();
+  };
+}
+function openSubModal(gid,sid){
+  const g=grupoById(gid);
+  const editing=sid?subById(g,sid):null;
+  const s=editing||{nombre:"",notas:""};
+  openModal(`
+    <h3>${editing?"Editar":"Nuevo"} subgrupo <span class="muted" style="font-weight:400;font-size:13px">· ${esc(g.nombre)}</span></h3>
+    <div class="field"><label>Nombre</label><input id="sNombre" value="${esc(s.nombre)}" placeholder="Ej: Supermercado"></div>
+    <div class="field"><label>Descripción / notas</label><textarea id="sNotas" placeholder="Opcional">${esc(s.notas||"")}</textarea></div>
+    <div class="modal-actions">
+      <button class="btn ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn green" id="saveSub">Guardar</button>
+    </div>
+  `);
+  document.getElementById("saveSub").onclick=()=>{
+    const nombre=document.getElementById("sNombre").value.trim();
+    if(!nombre){alert("Poné un nombre.");return;}
+    const notas=document.getElementById("sNotas").value.trim();
+    if(editing){editing.nombre=nombre;editing.notas=notas;}
+    else g.subgrupos.push({id:uid(),nombre,notas});
+    save();closeModal();renderGrupos(document.getElementById("content"));
+  };
+}
+
+/* ============================================================
+   Vista: Resúmenes (integrado en Dashboard? -> agregamos tabla expandible aquí en Movimientos? )
+   Añadimos un resumen expandible dentro de comparación... Mejor: sección propia dentro dashboard.
+   Requisito 5: Resúmenes mensuales -> lo mostramos como parte del Dashboard extra?
+   Lo ponemos como tabla expandible en la vista "Movimientos" bajo un botón, o mejor una subvista.
+   Implementamos aquí una función reutilizable de tabla expandible y la insertamos en Comparar?
+   Para cumplir, agregamos la tabla expandible al final del Dashboard.
+   ============================================================ */
+function buildExpandableSummary(ym){
+  const r=calcMonth(ym);
+  const wrap=document.createElement("div");
+  wrap.className="card mt";
+  wrap.innerHTML=`<div class="section-title">🧾 Detalle por grupo → subgrupo (${monthLabelLong(ym)})</div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Grupo</th><th>Tipo</th><th class="num">Ingresos</th><th class="num">Egresos</th><th class="num">Balance</th></tr></thead>
+      <tbody id="sumBody"></tbody>
+    </table></div>`;
+  const body=wrap.querySelector("#sumBody");
+  const groupsWithData=data.grupos.filter(g=>r.porGrupo[g.id]);
+  if(!groupsWithData.length && r.stockConsumido<=0){
+    body.innerHTML=`<tr><td colspan="5"><div class="empty">Sin movimientos este mes.</div></td></tr>`;
+    return wrap;
+  }
+  const rows=[];
+  groupsWithData.forEach(g=>{
+    const gg=r.porGrupo[g.id];
+    const bal=gg.ing-gg.egr;
+    rows.push(`<tr class="expand-row" data-g="${g.id}">
+      <td><span class="caret">▶</span> ${esc((g.icono||"")+" "+g.nombre)}</td>
+      <td><span class="pill ${g.tipo==='Negocio'?'neg2':'per'}">${g.tipo}</span></td>
+      <td class="num pos">${fmt(gg.ing)}</td>
+      <td class="num neg">${fmt(gg.egr)}</td>
+      <td class="num ${bal>=0?'pos':'neg'}">${fmt(bal)}</td>
+    </tr>`);
+    // subgrupos: sumar movimientos por subgrupo
+    const movs=data.movimientos.filter(m=>m.mes===ym && m.grupoId===g.id);
+    const bySub={};
+    movs.forEach(m=>{
+      const key=m.subgrupoId||"_none";
+      if(!bySub[key])bySub[key]={ing:0,egr:0};
+      bySub[key][m.tipo==="Ingreso"?"ing":"egr"]+=Number(m.monto||0);
+    });
+    Object.keys(bySub).forEach(sk=>{
+      const s=subById(g,sk);
+      const nm=s?s.nombre:"(sin subgrupo)";
+      const d=bySub[sk];
+      rows.push(`<tr class="sub-rows" data-parent="${g.id}" style="display:none">
+        <td style="padding-left:34px">↳ ${esc(nm)}</td><td></td>
+        <td class="num">${d.ing>0?fmt(d.ing):'—'}</td>
+        <td class="num">${d.egr>0?fmt(d.egr):'—'}</td>
+        <td class="num">${fmt(d.ing-d.egr)}</td>
+      </tr>`);
+    });
+  });
+  if(r.stockConsumido>0){
+    rows.push(`<tr><td>📦 Stock consumido</td><td><span class="pill neg2">Negocio</span></td><td class="num">—</td><td class="num neg">${fmt(r.stockConsumido)}</td><td class="num neg">${fmt(-r.stockConsumido)}</td></tr>`);
+  }
+  body.innerHTML=rows.join("");
+  body.querySelectorAll(".expand-row").forEach(row=>row.onclick=()=>{
+    row.classList.toggle("open");
+    const open=row.classList.contains("open");
+    body.querySelectorAll(`.sub-rows[data-parent="${row.dataset.g}"]`).forEach(sr=>sr.style.display=open?"":"none");
+  });
+  return wrap;
+}
+
+/* ============================================================
+   Vista: Comparación Mensual
+   ============================================================ */
+let cmpA=shiftMonth(currentMonth(),-1), cmpB=currentMonth();
+function renderComparar(c){
+  const box=document.createElement("div");
+  box.innerHTML=`
+    <div class="card mb">
+      <div class="toolbar" style="margin:0">
+        <div class="fld"><label>Mes A</label><input type="month" id="cmpA" value="${cmpA}"></div>
+        <div class="fld"><label>Mes B</label><input type="month" id="cmpB" value="${cmpB}"></div>
+      </div>
+    </div>
+    <div id="cmpOut"></div>`;
+  c.appendChild(box);
+  box.querySelector("#cmpA").onchange=e=>{cmpA=e.target.value;drawCompare();};
+  box.querySelector("#cmpB").onchange=e=>{cmpB=e.target.value;drawCompare();};
+  drawCompare();
+}
+function drawCompare(){
+  const out=document.getElementById("cmpOut");
+  if(!out) return;
+  const rA=calcMonth(cmpA), rB=calcMonth(cmpB);
+  // categorias: por grupo (egresos+ingresos net?) usamos egresos para gastos y también globales
+  const cats=[
+    {nm:"Ingresos personales",a:rA.personal.ing,b:rB.personal.ing},
+    {nm:"Egresos personales",a:rA.personal.egr,b:rB.personal.egr},
+    {nm:"Ingresos negocio",a:rA.negocio.ing,b:rB.negocio.ing},
+    {nm:"Egresos negocio",a:rA.negocio.egr,b:rB.negocio.egr},
+    {nm:"Stock consumido",a:rA.stockConsumido,b:rB.stockConsumido},
+    {nm:"Resultado negocio",a:rA.negocioNeto,b:rB.negocioNeto},
+    {nm:"Balance global",a:rA.balanceGlobal,b:rB.balanceGlobal}
+  ];
+  const rows=cats.map(ct=>{
+    const diff=ct.b-ct.a;
+    const p=ct.a!==0?(diff/Math.abs(ct.a)*100):(ct.b!==0?Infinity:0);
+    const up=diff>0;
+    return `<tr>
+      <td>${esc(ct.nm)}</td>
+      <td class="num">${fmt(ct.a)}</td>
+      <td class="num">${fmt(ct.b)}</td>
+      <td class="num ${diff===0?'muted':up?'pos':'neg'}">${diff>0?'+':''}${fmt(diff)}</td>
+      <td class="num ${diff===0?'muted':up?'pos':'neg'}">${diff===0?'—':(up?'▲ ':'▼ ')+pct(p)}</td>
+    </tr>`;
+  }).join("");
+
+  // barras por grupo (egresos)
+  const groupIds=[...new Set([...Object.keys(rA.porGrupo),...Object.keys(rB.porGrupo)])];
+  const labels=[], valA=[], valB=[];
+  groupIds.forEach(id=>{
+    const g=grupoById(id); if(!g) return;
+    labels.push(g.nombre);
+    valA.push((rA.porGrupo[id]?rA.porGrupo[id].egr:0));
+    valB.push((rB.porGrupo[id]?rB.porGrupo[id].egr:0));
+  });
+
+  out.innerHTML=`
+    <div class="card mb">
+      <div class="section-title">⚖️ ${monthLabel(cmpA)} vs ${monthLabel(cmpB)}</div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Categoría</th><th class="num">${monthLabel(cmpA)}</th><th class="num">${monthLabel(cmpB)}</th><th class="num">Diferencia</th><th class="num">% Cambio</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table></div>
+    </div>
+    <div class="card">
+      <div class="section-title">📊 Egresos por grupo</div>
+      <div class="legend" style="flex-direction:row;gap:18px;margin-bottom:10px">
+        <div class="row"><span class="dot" style="background:#3b82f6"></span> ${monthLabel(cmpA)}</div>
+        <div class="row"><span class="dot" style="background:#22c55e"></span> ${monthLabel(cmpB)}</div>
+      </div>
+      <canvas id="cmpBars"></canvas>
+      ${labels.length?"":'<div class="empty">Sin datos para graficar.</div>'}
+    </div>`;
+  if(labels.length){
+    drawBars(document.getElementById("cmpBars"),labels,[
+      {name:"A",color:"#3b82f6",values:valA},
+      {name:"B",color:"#22c55e",values:valB}
+    ],{height:280});
+  }
+}
+
+/* ============================================================
+   Vista: Comparación Anual
+   ============================================================ */
+let selectedYear=new Date().getFullYear();
+function renderAnual(c){
+  const years=availableYears();
+  const box=document.createElement("div");
+  box.innerHTML=`
+    <div class="card mb">
+      <div class="toolbar" style="margin:0">
+        <div class="fld"><label>Año</label><select id="yearSel">${years.map(y=>`<option ${y==selectedYear?"selected":""}>${y}</option>`).join("")}</select></div>
+      </div>
+    </div>
+    <div id="anualOut"></div>`;
+  c.appendChild(box);
+  box.querySelector("#yearSel").onchange=e=>{selectedYear=Number(e.target.value);drawAnual();};
+  drawAnual();
+}
+function availableYears(){
+  const set=new Set();
+  data.movimientos.forEach(m=>{if(m.mes)set.add(m.mes.slice(0,4));});
+  Object.keys(data.stock).forEach(k=>set.add(k.slice(0,4)));
+  set.add(String(new Date().getFullYear()));
+  return [...set].sort();
+}
+function drawAnual(){
+  const out=document.getElementById("anualOut");
+  if(!out) return;
+  const y=selectedYear;
+  const meses=[];
+  for(let i=1;i<=12;i++) meses.push(y+"-"+String(i).padStart(2,"0"));
+  const rows=meses.map(ym=>calcMonth(ym));
+  const mesNombres=["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+
+  // tabla mes x categorias principales
+  let totPersEgr=0,totNegNeto=0,totGlobal=0,totIng=0;
+  const tblRows=meses.map((ym,i)=>{
+    const r=rows[i];
+    totPersEgr+=r.personal.egr; totNegNeto+=r.negocioNeto; totGlobal+=r.balanceGlobal; totIng+=r.totalIngresos;
+    const hasData=r.totalIngresos>0||r.totalEgresos>0;
+    return `<tr>
+      <td>${mesNombres[i]}</td>
+      <td class="num">${hasData?fmt(r.totalIngresos):'<span class="muted">—</span>'}</td>
+      <td class="num">${hasData?fmt(r.personal.egr):'<span class="muted">—</span>'}</td>
+      <td class="num ${r.negocioNeto>=0?'pos':'neg'}">${hasData?fmt(r.negocioNeto):'<span class="muted">—</span>'}</td>
+      <td class="num ${r.balanceGlobal>=0?'pos':'neg'}">${hasData?fmt(r.balanceGlobal):'<span class="muted">—</span>'}</td>
+    </tr>`;
+  }).join("");
+
+  // mejor y peor mes (solo con datos)
+  let best=null,worst=null;
+  meses.forEach((ym,i)=>{
+    const r=rows[i];
+    if(r.totalIngresos===0 && r.totalEgresos===0) return;
+    if(best===null||r.balanceGlobal>rows[best].balanceGlobal) best=i;
+    if(worst===null||r.balanceGlobal<rows[worst].balanceGlobal) worst=i;
+  });
+  const activeMonths=meses.filter((ym,i)=>rows[i].totalIngresos>0||rows[i].totalEgresos>0).length;
+
+  out.innerHTML=`
+    <div class="grid g4 mb">
+      <div class="stat"><div class="lbl">💰 Ingresos anuales</div><div class="val pos">${fmt(totIng)}</div></div>
+      <div class="stat"><div class="lbl">⚖️ Resultado anual</div><div class="val ${totGlobal>=0?'pos':'neg'}">${fmt(totGlobal)}</div></div>
+      <div class="stat"><div class="lbl">📅 Promedio mensual</div><div class="val ${totGlobal>=0?'pos':'neg'}">${fmt(activeMonths?totGlobal/activeMonths:0)}</div><div class="sub">${activeMonths} mes(es) con datos</div></div>
+      <div class="stat"><div class="lbl">🏢 Neto negocio anual</div><div class="val ${totNegNeto>=0?'pos':'neg'}">${fmt(totNegNeto)}</div></div>
+    </div>
+    <div class="grid g2 mb">
+      <div class="stat"><div class="lbl">🏆 Mejor mes</div><div class="val pos">${best!==null?mesNombres[best]:'—'}</div><div class="sub">${best!==null?fmt(rows[best].balanceGlobal):'Sin datos'}</div></div>
+      <div class="stat"><div class="lbl">📉 Peor mes</div><div class="val neg">${worst!==null?mesNombres[worst]:'—'}</div><div class="sub">${worst!==null?fmt(rows[worst].balanceGlobal):'Sin datos'}</div></div>
+    </div>
+    <div class="card mb">
+      <div class="section-title">📈 Evolución mensual ${y}</div>
+      <div class="legend" style="flex-direction:row;gap:18px;margin-bottom:10px;flex-wrap:wrap">
+        <div class="row"><span class="dot" style="background:#3b82f6"></span> Global</div>
+        <div class="row"><span class="dot" style="background:#22c55e"></span> Personal (balance)</div>
+        <div class="row"><span class="dot" style="background:#eab308"></span> Negocio (neto)</div>
+      </div>
+      <canvas id="anualLines"></canvas>
+    </div>
+    <div class="card">
+      <div class="section-title">🗓️ Detalle mes a mes</div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Mes</th><th class="num">Ingresos</th><th class="num">Egresos pers.</th><th class="num">Neto negocio</th><th class="num">Balance global</th></tr></thead>
+        <tbody>${tblRows}</tbody>
+        <tfoot><tr style="font-weight:700">
+          <td>Total ${y}</td><td class="num">${fmt(totIng)}</td><td class="num">${fmt(totPersEgr)}</td>
+          <td class="num ${totNegNeto>=0?'pos':'neg'}">${fmt(totNegNeto)}</td>
+          <td class="num ${totGlobal>=0?'pos':'neg'}">${fmt(totGlobal)}</td>
+        </tr></tfoot>
+      </table></div>
+    </div>`;
+
+  drawLines(document.getElementById("anualLines"),mesNombres,[
+    {name:"Global",color:"#3b82f6",values:rows.map(r=>r.balanceGlobal)},
+    {name:"Personal",color:"#22c55e",values:rows.map(r=>r.personalBalance)},
+    {name:"Negocio",color:"#eab308",values:rows.map(r=>r.negocioNeto)}
+  ],{height:280});
+}
+
+/* ============================================================
+   Vista: Datos / Backup / Export
+   ============================================================ */
+function renderDatos(c){
+  const box=document.createElement("div");
+  const nMov=data.movimientos.length, nGrp=data.grupos.length;
+  box.innerHTML=`
+    <div class="grid g2">
+      <div class="card">
+        <div class="section-title">📤 Exportar</div>
+        <p class="hint mb">Descargá tus datos en CSV o hacé un backup completo en JSON.</p>
+        <div class="flex wrap" style="gap:10px">
+          <button class="btn" id="expMonth">📄 CSV mes actual</button>
+          <button class="btn" id="expAll">📚 CSV todo el historial</button>
+          <button class="btn green" id="backup">💾 Backup JSON</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="section-title">📥 Restaurar</div>
+        <p class="hint mb">Cargá un backup JSON. <b>Reemplaza</b> todos los datos actuales.</p>
+        <input type="file" id="restoreFile" accept="application/json,.json">
+        <p class="hint mt">Movimientos: <b>${nMov}</b> · Grupos: <b>${nGrp}</b> · Meses con stock: <b>${Object.keys(data.stock).length}</b></p>
+      </div>
+    </div>
+    <div class="card mt">
+      <div class="section-title">⚙️ Configuración</div>
+      <div class="row2">
+        <div class="field"><label>Moneda</label><input id="cfgMoneda" value="${esc(data.configuracion.moneda||"ARS")}"></div>
+        <div class="field"><label>Símbolo</label><input id="cfgSimbolo" value="${esc(data.configuracion.simbolo||"$")}"></div>
+      </div>
+      <button class="btn green" id="saveCfg">Guardar configuración</button>
+    </div>
+    <div class="card mt">
+      <div class="section-title" style="color:var(--red)">⚠️ Zona peligrosa</div>
+      <button class="btn red" id="resetAll">Borrar todos los datos</button>
+    </div>`;
+  c.appendChild(box);
+
+  box.querySelector("#expMonth").onclick=()=>exportCSV(selectedMonth);
+  box.querySelector("#expAll").onclick=()=>exportCSV(null);
+  box.querySelector("#backup").onclick=doBackup;
+  box.querySelector("#restoreFile").onchange=doRestore;
+  box.querySelector("#saveCfg").onclick=()=>{
+    data.configuracion.moneda=box.querySelector("#cfgMoneda").value.trim()||"ARS";
+    data.configuracion.simbolo=box.querySelector("#cfgSimbolo").value.trim()||"$";
+    save();render();
+  };
+  box.querySelector("#resetAll").onclick=()=>{
+    if(confirm("¿Borrar TODOS los datos y volver a los valores por defecto? Esto no se puede deshacer.")){
+      data=defaultData();save();setView("dashboard");
+    }
+  };
+}
+function csvCell(v){
+  const s=String(v==null?"":v);
+  return /[",\n;]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;
+}
+function exportCSV(ym){
+  const movs=(ym?data.movimientos.filter(m=>m.mes===ym):data.movimientos.slice())
+    .sort((a,b)=>(a.mes<b.mes?-1:a.mes>b.mes?1:(a.fecha<b.fecha?-1:1)));
+  const header=["Mes","Fecha","Tipo","TipoGrupo","Grupo","Subgrupo","Concepto","Detalle","Monto"];
+  const lines=[header.join(";")];
+  movs.forEach(m=>{
+    const g=grupoById(m.grupoId);const s=subById(g,m.subgrupoId);
+    lines.push([m.mes,m.fecha,m.tipo,g?g.tipo:"",g?g.nombre:"",s?s.nombre:"",m.concepto,m.detalle,fmtNum(m.monto)].map(csvCell).join(";"));
+  });
+  // Añadir stock como filas informativas
+  const stockKeys=ym?[ym]:Object.keys(data.stock);
+  stockKeys.forEach(k=>{
+    const cons=stockConsumido(k);
+    if(cons>0) lines.push([k,k+"-01","Egreso","Negocio","Stock/consumido","","Stock consumido del mes","inicial-final",fmtNum(cons)].map(csvCell).join(";"));
+  });
+  downloadFile((ym?("movimientos_"+ym):"movimientos_historial")+".csv",lines.join("\n"),"text/csv;charset=utf-8");
+}
+function doBackup(){
+  downloadFile("finanzas_backup_"+currentMonth()+".json",JSON.stringify(data,null,2),"application/json");
+}
+function doRestore(e){
+  const file=e.target.files[0];
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=()=>{
+    try{
+      const d=JSON.parse(reader.result);
+      if(!d.grupos||!d.movimientos) throw new Error("Formato inválido");
+      if(!confirm("Esto reemplazará todos tus datos actuales. ¿Continuar?")) return;
+      data=d;
+      if(!data.stock)data.stock={};
+      if(!data.configuracion)data.configuracion={moneda:"ARS",simbolo:"$",umbralStock:0};
+      save();setView("dashboard");
+      alert("Backup restaurado correctamente.");
+    }catch(err){alert("No se pudo leer el archivo: "+err.message);}
+  };
+  reader.readAsText(file);
+}
+function downloadFile(name,content,type){
+  const blob=new Blob([content],{type});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url;a.download=name;document.body.appendChild(a);a.click();
+  document.body.removeChild(a);setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
+/* ============================================================
+   Modal genérico
+   ============================================================ */
+function openModal(html){
+  document.getElementById("modal").innerHTML=html;
+  document.getElementById("overlay").classList.add("open");
+}
+function closeModal(){
+  document.getElementById("overlay").classList.remove("open");
+  document.getElementById("modal").innerHTML="";
+}
+window.closeModal=closeModal;
+document.getElementById("overlay").addEventListener("click",e=>{if(e.target.id==="overlay")closeModal();});
+
+/* Dashboard: añadir resumen expandible tras render */
+const _renderDashboard=renderDashboard;
+renderDashboard=function(c){
+  _renderDashboard(c);
+  c.appendChild(buildExpandableSummary(selectedMonth));
+};
+
+/* ============================================================
+   Sidebar móvil
+   ============================================================ */
+function openSidebar(){document.getElementById("sidebar").classList.add("open");document.getElementById("backdrop").classList.add("open");}
+function closeSidebar(){document.getElementById("sidebar").classList.remove("open");document.getElementById("backdrop").classList.remove("open");}
+document.getElementById("hamburger").onclick=openSidebar;
+document.getElementById("backdrop").onclick=closeSidebar;
+
+/* ============================================================
+   Bind global controls
+   ============================================================ */
+document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>setView(b.dataset.view));
+const gm=document.getElementById("globalMonth");
+gm.value=selectedMonth;
+gm.onchange=()=>{selectedMonth=gm.value||currentMonth();render();};
+document.getElementById("prevMonth").onclick=()=>{selectedMonth=shiftMonth(selectedMonth,-1);gm.value=selectedMonth;render();};
+document.getElementById("nextMonth").onclick=()=>{selectedMonth=shiftMonth(selectedMonth,1);gm.value=selectedMonth;render();};
+
+window.addEventListener("resize",()=>{
+  // redibujar gráficos responsivos de la vista actual
+  if(["dashboard","comparar","anual"].includes(currentView)) render();
+});
+
+/* Init */
+setView("dashboard");
+</script>
+</body>
+</html>
