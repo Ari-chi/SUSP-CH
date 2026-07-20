@@ -6,17 +6,17 @@
 <title>Finanzas · Personal + Negocio</title>
 <style>
   :root{
-    --bg:#0f1117;
-    --card:#1a1d27;
-    --card2:#20242f;
-    --border:#2a2f3d;
-    --text:#e6e9ef;
-    --muted:#8a91a3;
-    --blue:#3b82f6;
-    --green:#22c55e;
-    --red:#ef4444;
-    --yellow:#eab308;
-    --accent:#3b82f6;
+    --bg:#f4f6f9;
+    --card:#ffffff;
+    --card2:#eef1f5;
+    --border:#dfe3ea;
+    --text:#1a1d27;
+    --muted:#667085;
+    --blue:#2563eb;
+    --green:#16a34a;
+    --red:#dc2626;
+    --yellow:#ca8a04;
+    --accent:#2563eb;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{height:100%}
@@ -48,7 +48,7 @@
   .main{flex:1;min-width:0;display:flex;flex-direction:column}
   .topbar{
     display:flex;align-items:center;gap:14px;padding:14px 22px;border-bottom:1px solid var(--border);
-    background:rgba(15,17,23,.85);backdrop-filter:blur(6px);position:sticky;top:0;z-index:20;flex-wrap:wrap;
+    background:rgba(255,255,255,.85);backdrop-filter:blur(6px);position:sticky;top:0;z-index:20;flex-wrap:wrap;
   }
   .topbar h1{font-size:18px;font-weight:700}
   .month-picker{display:flex;align-items:center;gap:6px;margin-left:auto}
@@ -75,13 +75,13 @@
   .btn-icon:hover{background:var(--card2);color:var(--text)}
   .btn-icon.danger:hover{color:var(--red)}
   /* Cards & grid */
-  .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px;box-shadow:0 1px 3px rgba(16,24,40,.05)}
   .grid{display:grid;gap:16px}
   .g2{grid-template-columns:repeat(2,1fr)}
   .g3{grid-template-columns:repeat(3,1fr)}
   .g4{grid-template-columns:repeat(4,1fr)}
   .section-title{font-size:15px;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:8px}
-  .stat{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px 18px}
+  .stat{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px 18px;box-shadow:0 1px 3px rgba(16,24,40,.05)}
   .stat .lbl{font-size:12px;color:var(--muted);margin-bottom:7px;display:flex;align-items:center;gap:6px}
   .stat .val{font-size:24px;font-weight:700;letter-spacing:-.5px}
   .stat .sub{font-size:11px;color:var(--muted);margin-top:4px}
@@ -352,11 +352,11 @@ function drawPie(canvas, items, opts){
   const cx=size/2, cy=size/2, r=size/2-4, ir=opts.donut? r*0.58 : 0;
   const total = items.reduce((a,b)=>a+b.value,0);
   if(total<=0){
-    ctx.fillStyle="#2a2f3d";
+    ctx.fillStyle="#e2e5ea";
     ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);
     if(ir){ctx.arc(cx,cy,ir,0,Math.PI*2,true);}
     ctx.fill();
-    ctx.fillStyle="#8a91a3";ctx.font="12px sans-serif";ctx.textAlign="center";
+    ctx.fillStyle="#667085";ctx.font="12px sans-serif";ctx.textAlign="center";
     ctx.fillText("Sin datos",cx,cy);
     return;
   }
@@ -377,9 +377,9 @@ function drawPie(canvas, items, opts){
     ctx.beginPath();ctx.arc(cx,cy,ir,0,Math.PI*2);ctx.fill();
     ctx.globalCompositeOperation="source-over";
     if(opts.centerText){
-      ctx.fillStyle="#e6e9ef";ctx.font="bold 15px sans-serif";ctx.textAlign="center";ctx.textBaseline="middle";
+      ctx.fillStyle="#1a1d27";ctx.font="bold 15px sans-serif";ctx.textAlign="center";ctx.textBaseline="middle";
       ctx.fillText(opts.centerText,cx,cy-7);
-      if(opts.centerSub){ctx.fillStyle="#8a91a3";ctx.font="11px sans-serif";ctx.fillText(opts.centerSub,cx,cy+11);}
+      if(opts.centerSub){ctx.fillStyle="#667085";ctx.font="11px sans-serif";ctx.fillText(opts.centerSub,cx,cy+11);}
     }
   }
 }
@@ -400,7 +400,7 @@ function drawBars(canvas, groups, series, opts){
   if(max<=0) max=1;
   const nice = niceMax(max);
   // grid
-  ctx.strokeStyle="#2a2f3d";ctx.fillStyle="#8a91a3";ctx.font="10px sans-serif";ctx.lineWidth=1;
+  ctx.strokeStyle="#e2e5ea";ctx.fillStyle="#667085";ctx.font="10px sans-serif";ctx.lineWidth=1;
   const lines=4;
   for(let i=0;i<=lines;i++){
     const y=padT+plotH-(plotH*i/lines);
@@ -422,7 +422,7 @@ function drawBars(canvas, groups, series, opts){
       ctx.fillStyle=v<0?"#ef4444":s.color;
       ctx.fillRect(bx,by,bw-3,h);
     });
-    ctx.fillStyle="#8a91a3";ctx.font="10px sans-serif";ctx.textAlign="center";ctx.textBaseline="top";
+    ctx.fillStyle="#667085";ctx.font="10px sans-serif";ctx.textAlign="center";ctx.textBaseline="top";
     const lbl = label.length>9?label.slice(0,8)+"…":label;
     ctx.fillText(lbl,gx+gw/2,padT+plotH+6);
   });
@@ -446,7 +446,7 @@ function drawLines(canvas, labels, series, opts){
   const range=niceH-niceL || 1;
   const yOf=v=>padT+plotH-((v-niceL)/range*plotH);
   // grid
-  ctx.strokeStyle="#2a2f3d";ctx.fillStyle="#8a91a3";ctx.font="10px sans-serif";ctx.lineWidth=1;
+  ctx.strokeStyle="#e2e5ea";ctx.fillStyle="#667085";ctx.font="10px sans-serif";ctx.lineWidth=1;
   const lines=4;
   for(let i=0;i<=lines;i++){
     const val=niceL+(range*i/lines);
@@ -456,7 +456,7 @@ function drawLines(canvas, labels, series, opts){
   }
   // zero line
   if(niceL<0){
-    const zy=yOf(0);ctx.strokeStyle="#4a5163";ctx.beginPath();ctx.moveTo(padL,zy);ctx.lineTo(W-padR,zy);ctx.stroke();
+    const zy=yOf(0);ctx.strokeStyle="#9aa1ae";ctx.beginPath();ctx.moveTo(padL,zy);ctx.lineTo(W-padR,zy);ctx.stroke();
   }
   const n=labels.length;
   const xOf=i=>padL+(n<=1?plotW/2:plotW*i/(n-1));
