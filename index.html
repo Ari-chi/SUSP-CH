@@ -1110,11 +1110,12 @@ function renderDatos(c){
     <div class="grid g2">
       <div class="card">
         <div class="section-title">📤 Exportar</div>
-        <p class="hint mb">Descargá tus datos en CSV o hacé un backup completo en JSON.</p>
+        <p class="hint mb">Descargá tus movimientos a Excel eligiendo el período, o hacé un backup completo en JSON.</p>
         <div class="flex wrap" style="gap:10px">
-          <button class="btn" id="expMonth">📄 CSV mes actual</button>
-          <button class="btn" id="expAll">📚 CSV todo el historial</button>
-          <button class="btn green" id="backup">💾 Backup JSON</button>
+          <button class="btn green" id="expExcel">📊 Descargar Excel…</button>
+          <button class="btn ghost" id="expMonth">📄 CSV mes actual</button>
+          <button class="btn ghost" id="expAll">📚 CSV historial</button>
+          <button class="btn ghost" id="backup">💾 Backup JSON</button>
         </div>
       </div>
       <div class="card">
@@ -1138,6 +1139,7 @@ function renderDatos(c){
     </div>`;
   c.appendChild(box);
 
+  box.querySelector("#expExcel").onclick=openExcelModal;
   box.querySelector("#expMonth").onclick=()=>exportCSV(selectedMonth);
   box.querySelector("#expAll").onclick=()=>exportCSV(null);
   box.querySelector("#backup").onclick=doBackup;
@@ -1190,11 +1192,146 @@ function doRestore(e){
   reader.readAsText(file);
 }
 function downloadFile(name,content,type){
-  const blob=new Blob([content],{type});
+  downloadBlob(name,new Blob([content],{type}));
+}
+function downloadBlob(name,blob){
   const url=URL.createObjectURL(blob);
   const a=document.createElement("a");
   a.href=url;a.download=name;document.body.appendChild(a);a.click();
   document.body.removeChild(a);setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
+/* ============================================================
+   Exportación a Excel (.xlsx nativo, sin librerías)
+   Un .xlsx es un ZIP de archivos XML. Generamos el ZIP a mano
+   (método STORE, sin compresión) con CRC32 propio.
+   ============================================================ */
+function crc32(bytes){
+  let crc=~0;
+  for(let i=0;i<bytes.length;i++){
+    crc^=bytes[i];
+    for(let j=0;j<8;j++) crc=(crc>>>1)^(0xEDB88320 & -(crc&1));
+  }
+  return (~crc)>>>0;
+}
+function strBytes(s){ return new TextEncoder().encode(s); }
+function zipStore(files){
+  const u16=n=>[n&0xFF,(n>>>8)&0xFF];
+  const u32=n=>[n&0xFF,(n>>>8)&0xFF,(n>>>16)&0xFF,(n>>>24)&0xFF];
+  const chunks=[], central=[]; let offset=0;
+  files.forEach(f=>{
+    const name=strBytes(f.name), body=f.bytes, crc=crc32(body);
+    const local=[].concat(u32(0x04034b50),u16(20),u16(0),u16(0),u16(0),u16(0),
+      u32(crc),u32(body.length),u32(body.length),u16(name.length),u16(0));
+    const la=new Uint8Array(local.length+name.length+body.length);
+    la.set(local,0); la.set(name,local.length); la.set(body,local.length+name.length);
+    chunks.push(la);
+    const cen=[].concat(u32(0x02014b50),u16(20),u16(20),u16(0),u16(0),u16(0),u16(0),
+      u32(crc),u32(body.length),u32(body.length),u16(name.length),u16(0),u16(0),u16(0),u16(0),u32(0),u32(offset));
+    const ca=new Uint8Array(cen.length+name.length);
+    ca.set(cen,0); ca.set(name,cen.length);
+    central.push(ca);
+    offset+=la.length;
+  });
+  let cenSize=0; central.forEach(c=>cenSize+=c.length);
+  const eocd=new Uint8Array([].concat(u32(0x06054b50),u16(0),u16(0),
+    u16(files.length),u16(files.length),u32(cenSize),u32(offset),u16(0)));
+  return new Blob([...chunks,...central,eocd],
+    {type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+}
+function colName(i){ let s="";i++;while(i>0){const m=(i-1)%26;s=String.fromCharCode(65+m)+s;i=Math.floor((i-1)/26);}return s; }
+function exportXLSX(movs,label){
+  const headers=["Mes","Fecha","Tipo","Ámbito","Grupo","Subgrupo","Concepto","Detalle","Ingreso","Egreso"];
+  const cell=(col,row,val,style,isNum)=>{
+    const ref=colName(col)+row, s=style?` s="${style}"`:"";
+    return isNum ? `<c r="${ref}"${s}><v>${val}</v></c>`
+                 : `<c r="${ref}"${s} t="inlineStr"><is><t xml:space="preserve">${esc(val)}</t></is></c>`;
+  };
+  const rows=[];
+  let hc=""; headers.forEach((h,i)=>hc+=cell(i,1,h,1,false));
+  rows.push(`<row r="1">${hc}</row>`);
+  let totIng=0,totEgr=0;
+  movs.forEach((m,idx)=>{
+    const r=idx+2, g=grupoById(m.grupoId), sub=subById(g,m.subgrupoId);
+    const ing=m.tipo==="Ingreso"?Number(m.monto||0):null;
+    const egr=m.tipo==="Egreso"?Number(m.monto||0):null;
+    if(ing!=null)totIng+=ing; if(egr!=null)totEgr+=egr;
+    let cc="";
+    cc+=cell(0,r,m.mes||"",0,false);
+    cc+=cell(1,r,m.fecha||"",0,false);
+    cc+=cell(2,r,m.tipo||"",0,false);
+    cc+=cell(3,r,g?g.tipo:"",0,false);
+    cc+=cell(4,r,g?g.nombre:"",0,false);
+    cc+=cell(5,r,sub?sub.nombre:"",0,false);
+    cc+=cell(6,r,m.concepto||"",0,false);
+    cc+=cell(7,r,m.detalle||"",0,false);
+    if(ing!=null) cc+=cell(8,r,ing,2,true);
+    if(egr!=null) cc+=cell(9,r,egr,2,true);
+    rows.push(`<row r="${r}">${cc}</row>`);
+  });
+  const tr=movs.length+2;
+  let tc=cell(7,tr,"TOTALES",4,false)+cell(8,tr,totIng,3,true)+cell(9,tr,totEgr,3,true);
+  rows.push(`<row r="${tr}">${tc}</row>`);
+  const lastData=Math.max(1,movs.length+1);
+  const sheet=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><cols><col min="1" max="1" width="10"/><col min="2" max="2" width="12"/><col min="3" max="3" width="9"/><col min="4" max="4" width="11"/><col min="5" max="5" width="22"/><col min="6" max="6" width="18"/><col min="7" max="7" width="28"/><col min="8" max="8" width="26"/><col min="9" max="9" width="15"/><col min="10" max="10" width="15"/></cols><sheetData>${rows.join("")}</sheetData><autoFilter ref="A1:J${lastData}"/></worksheet>`;
+  const contentTypes=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`;
+  const rels=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`;
+  const workbook=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Movimientos" sheetId="1" r:id="rId1"/></sheets></workbook>`;
+  const wbRels=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`;
+  const styles=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="1"><numFmt numFmtId="164" formatCode="&quot;$&quot;#,##0.00"/></numFmts><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFE8EEF7"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="5"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/><xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="164" fontId="1" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
+  const files=[
+    {name:"[Content_Types].xml",bytes:strBytes(contentTypes)},
+    {name:"_rels/.rels",bytes:strBytes(rels)},
+    {name:"xl/workbook.xml",bytes:strBytes(workbook)},
+    {name:"xl/_rels/workbook.xml.rels",bytes:strBytes(wbRels)},
+    {name:"xl/styles.xml",bytes:strBytes(styles)},
+    {name:"xl/worksheets/sheet1.xml",bytes:strBytes(sheet)}
+  ];
+  downloadBlob("movimientos_"+label+".xlsx", zipStore(files));
+}
+function openExcelModal(){
+  openModal(`
+    <h3>📊 Descargar a Excel</h3>
+    <div class="field"><label>¿Qué período querés bajar?</label>
+      <select id="xMode"><option value="mes">Un mes</option><option value="rango">Rango de meses</option><option value="todo">Todo el historial</option></select>
+    </div>
+    <div id="xMesWrap" class="field"><label>Mes</label><input type="month" id="xMes" value="${selectedMonth}"></div>
+    <div id="xRangoWrap" class="row2" style="display:none">
+      <div class="field"><label>Desde</label><input type="month" id="xDesde" value="${selectedMonth}"></div>
+      <div class="field"><label>Hasta</label><input type="month" id="xHasta" value="${selectedMonth}"></div>
+    </div>
+    <p class="hint">Genera un archivo .xlsx con una fila por movimiento (Ingreso/Egreso en columnas separadas) y una fila de totales.</p>
+    <div class="modal-actions">
+      <button class="btn ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn green" id="xGo">Descargar Excel</button>
+    </div>`);
+  const mode=document.getElementById("xMode");
+  const upd=()=>{
+    document.getElementById("xMesWrap").style.display=mode.value==="mes"?"":"none";
+    document.getElementById("xRangoWrap").style.display=mode.value==="rango"?"":"none";
+  };
+  mode.onchange=upd; upd();
+  document.getElementById("xGo").onclick=()=>{
+    const all=data.movimientos.slice().sort((a,b)=>(a.mes<b.mes?-1:a.mes>b.mes?1:(a.fecha<b.fecha?-1:a.fecha>b.fecha?1:0)));
+    let movs,label;
+    if(mode.value==="mes"){
+      const ym=document.getElementById("xMes").value; if(!ym){alert("Elegí un mes.");return;}
+      movs=all.filter(m=>m.mes===ym); label=ym;
+    }else if(mode.value==="rango"){
+      const d=document.getElementById("xDesde").value,h=document.getElementById("xHasta").value;
+      if(!d||!h){alert("Completá desde y hasta.");return;}
+      const lo=d<=h?d:h, hi=d<=h?h:d;
+      movs=all.filter(m=>m.mes>=lo&&m.mes<=hi); label=lo+"_a_"+hi;
+    }else{ movs=all; label="historial"; }
+    if(!movs.length){alert("No hay movimientos en ese período.");return;}
+    exportXLSX(movs,label); closeModal();
+  };
 }
 
 /* ============================================================
