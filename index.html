@@ -517,39 +517,62 @@ function renderDashboard(c){
     </div>
     <div class="grid g2">
       <div class="card">
-        <div class="section-title">🥧 Resumen global (Personal + Negocio)</div>
-        <div class="chart-wrap">
-          <canvas id="pieGlobal"></canvas>
-          <div class="legend" id="legendGlobal" style="flex:1;min-width:160px"></div>
+        <div class="section-title">🥧 Ingresos vs Egresos del mes</div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:18px">
+          <div style="position:relative;width:230px;height:230px">
+            <canvas id="pieBalance"></canvas>
+            <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none">
+              <div style="font-size:12px;color:var(--muted)">Balance neto</div>
+              <div style="font-size:22px;font-weight:700" class="${win?'pos':'neg'}">${fmt(r.balanceGlobal)}</div>
+            </div>
+          </div>
+          <div class="legend" id="legendBalance" style="width:100%;max-width:280px"></div>
         </div>
       </div>
       <div class="card">
-        <div class="section-title">🏢 Desglose del negocio</div>
-        <div class="chart-wrap">
-          <canvas id="pieNeg"></canvas>
-          <div class="legend" id="legendNeg" style="flex:1;min-width:160px"></div>
+        <div class="section-title">📊 Negocio y Personal</div>
+        <div style="display:flex;flex-direction:column">
+          <div class="flex between" style="padding:13px 2px">
+            <span class="muted">🏢 Ingresos negocio</span>
+            <span class="pos" style="font-size:21px;font-weight:700">${fmt(r.negocio.ing)}</span>
+          </div>
+          <div class="flex between" style="padding:13px 2px">
+            <span class="muted">🏢 Egresos negocio</span>
+            <span class="neg" style="font-size:21px;font-weight:700">${fmt(r.negocio.egr)}</span>
+          </div>
+          <div style="border-top:1px solid var(--border);margin:4px 0"></div>
+          <div class="flex between" style="padding:13px 2px">
+            <span class="muted">👤 Ingresos personal</span>
+            <span class="pos" style="font-size:21px;font-weight:700">${fmt(r.personal.ing)}</span>
+          </div>
+          <div class="flex between" style="padding:13px 2px">
+            <span class="muted">👤 Egresos personal</span>
+            <span class="neg" style="font-size:21px;font-weight:700">${fmt(r.personal.egr)}</span>
+          </div>
+          <div style="border-top:2px solid var(--border);margin-top:8px;padding-top:6px">
+            <div class="flex between" style="padding:11px 2px">
+              <span style="font-weight:600">Resultado negocio</span>
+              <span class="${r.negocioNeto>=0?'pos':'neg'}" style="font-size:19px;font-weight:700">${fmt(r.negocioNeto)}</span>
+            </div>
+            <div class="flex between" style="padding:11px 2px">
+              <span style="font-weight:600">Balance personal</span>
+              <span class="${r.personalBalance>=0?'pos':'neg'}" style="font-size:19px;font-weight:700">${fmt(r.personalBalance)}</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>`;
   c.appendChild(wrap);
 
-  // Pie global: egresos por grupo (todos los grupos con egreso)
-  const globalItems=[];
-  data.grupos.forEach((g,i)=>{
-    const gg=r.porGrupo[g.id];
-    if(gg && gg.egr>0) globalItems.push({label:(g.icono||"")+" "+g.nombre,value:gg.egr,color:g.color||DEFAULT_COLORS[i%DEFAULT_COLORS.length]});
-  });
-  globalItems.sort((a,b)=>b.value-a.value);
-  drawPie(document.getElementById("pieGlobal"),globalItems,{size:200,donut:true,centerText:fmt(r.totalEgresos),centerSub:"egresos"});
-  renderLegend("legendGlobal",globalItems);
-
-  // Pie negocio: ingresos vs egresos, y resultado neto en el centro
-  const negItems=[
-    {label:"Ingresos (ventas)",value:r.negocio.ing,color:"#16a34a"},
-    {label:"Egresos",value:r.negocio.egr,color:"#dc2626"}
+  // Card izquierda: donut con dos segmentos (Ingresos totales vs Egresos totales)
+  const balanceItems=[
+    {label:"Ingresos",value:r.totalIngresos,color:"#16a34a"},
+    {label:"Egresos",value:r.totalEgresos,color:"#dc2626"}
   ].filter(x=>x.value>0);
-  drawPie(document.getElementById("pieNeg"),negItems,{size:200,donut:true,centerText:fmt(r.negocioNeto),centerSub:"neto"});
-  renderLegend("legendNeg",negItems);
+  drawPie(document.getElementById("pieBalance"),balanceItems,{size:230,donut:true});
+  document.getElementById("legendBalance").innerHTML=`
+    <div class="row"><span class="dot" style="background:#16a34a"></span><span class="nm">Ingresos</span><span class="pc" style="font-weight:600">${fmt(r.totalIngresos)}</span></div>
+    <div class="row"><span class="dot" style="background:#dc2626"></span><span class="nm">Egresos</span><span class="pc" style="font-weight:600">${fmt(r.totalEgresos)}</span></div>`;
 }
 function renderLegend(id,items){
   const el=document.getElementById(id);
