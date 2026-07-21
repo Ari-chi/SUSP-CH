@@ -2,8 +2,17 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Finanzas · Personal + Negocio</title>
+<meta name="theme-color" content="#2563eb">
+<meta name="description" content="Gestión financiera personal y de negocio, con sincronización en la nube.">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Finanzas">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
 <style>
   :root{
     --bg:#f4f6f9;
@@ -159,6 +168,16 @@
     .g4{grid-template-columns:1fr}
     .content{padding:16px}
     .row2{grid-template-columns:1fr}
+    .topbar h1{font-size:16px}
+    .month-picker #globalMonth{width:130px}
+    .btn{padding:11px 15px}
+    input,select,textarea{padding:11px 12px}
+  }
+  /* App instalada (PWA): respetar notch/barras del sistema */
+  @supports(padding:max(0px)){
+    .topbar{padding-top:max(14px,env(safe-area-inset-top))}
+    .sidebar{padding-top:env(safe-area-inset-top)}
+    .content{padding-bottom:max(22px,env(safe-area-inset-bottom))}
   }
 </style>
 </head>
@@ -174,7 +193,10 @@
       <button data-view="anual"><span class="ico">📈</span> Anual</button>
       <button data-view="datos"><span class="ico">💾</span> Datos</button>
     </nav>
-    <div class="sb-foot">Datos guardados en tu navegador.<br>Nada se envía a internet.</div>
+    <div class="sb-foot">
+      <div id="syncBadge" style="font-weight:600;margin-bottom:4px">☁️ Sin sincronizar</div>
+      Se guarda en este dispositivo.<br>Activá la nube en <b>Datos</b> para sincronizar.
+    </div>
   </aside>
   <div class="backdrop" id="backdrop"></div>
 
@@ -230,7 +252,8 @@ function defaultData(){
       mk("Otros negocio","Negocio","#8a91a3","📎",["Varios"])
     ],
     movimientos:[],
-    configuracion:{ moneda:"ARS", simbolo:"$" }
+    configuracion:{ moneda:"ARS", simbolo:"$" },
+    updatedAt:0
   };
 }
 
@@ -243,6 +266,7 @@ function load(){
     if(!d.grupos) d.grupos=[];
     if(!d.movimientos) d.movimientos=[];
     if(!d.configuracion) d.configuracion={moneda:"ARS",simbolo:"$"};
+    if(typeof d.updatedAt!=="number") d.updatedAt=0;
     delete d.stock; // versión anterior con inventario: ya no se usa
     delete d.configuracion.umbralStock;
     return d;
@@ -251,9 +275,164 @@ function load(){
     return defaultData();
   }
 }
-function save(){
+// save(): guarda en localStorage. Por defecto marca el cambio con timestamp
+// y dispara la sincronización a la nube. Pasar {remote:true} al adoptar datos
+// bajados de la nube para no re-marcar ni volver a subirlos.
+function save(opts){
+  opts=opts||{};
+  if(!opts.remote) data.updatedAt=Date.now();
   try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
   catch(e){ alert("No se pudo guardar: "+e.message); }
+  if(!opts.remote) scheduleSyncPush();
+}
+
+/* ============================================================
+   Sincronización en la nube (GitHub Gist privado)
+   El token y el id del gist se guardan aparte, en localStorage,
+   nunca dentro de los datos ni del backup.
+   ============================================================ */
+const SYNC_KEY="finanzas_sync";
+const GIST_FILE="finanzas_data.json";
+let syncCfg=loadSync();
+let syncState="idle"; // idle | syncing | ok | error | off
+let syncMsg="";
+let pushTimer=null;
+
+function loadSync(){
+  try{ return JSON.parse(localStorage.getItem(SYNC_KEY))||{}; }
+  catch(e){ return {}; }
+}
+function saveSync(){ localStorage.setItem(SYNC_KEY, JSON.stringify(syncCfg)); }
+function syncEnabled(){ return !!(syncCfg.token && syncCfg.gistId && syncCfg.auto!==false); }
+
+async function gistRequest(method, path, body){
+  const res=await fetch("https://api.github.com/gists"+path,{
+    method,
+    headers:{
+      "Authorization":"Bearer "+syncCfg.token,
+      "Accept":"application/vnd.github+json",
+      "Content-Type":"application/json"
+    },
+    body: body?JSON.stringify(body):undefined
+  });
+  if(!res.ok){
+    let detail="";
+    try{ detail=(await res.json()).message||""; }catch(e){}
+    throw new Error("GitHub "+res.status+(detail?(" · "+detail):""));
+  }
+  return res.json();
+}
+
+// Crea el gist privado la primera vez (o si se perdió el id).
+async function syncConnect(token, gistId){
+  syncCfg.token=token.trim();
+  syncCfg.gistId=(gistId||"").trim();
+  syncCfg.auto=true;
+  setSyncState("syncing","Conectando…");
+  try{
+    if(syncCfg.gistId){
+      // validar acceso bajando el contenido
+      const remote=await gistPull();
+      if(remote){ // hay datos remotos: adoptarlos si son más nuevos o si local está vacío
+        adoptRemote(remote);
+      }else{
+        await gistPush(); // gist existe pero sin nuestro archivo: subir local
+      }
+    }else{
+      const g=await gistRequest("POST","",{
+        description:"Datos de la app Finanzas (privado)",
+        public:false,
+        files:{[GIST_FILE]:{content:JSON.stringify(data)}}
+      });
+      syncCfg.gistId=g.id;
+    }
+    saveSync();
+    setSyncState("ok","Sincronizado");
+    return true;
+  }catch(e){
+    setSyncState("error",e.message);
+    return false;
+  }
+}
+function syncDisconnect(){
+  syncCfg={};
+  saveSync();
+  setSyncState("off","Sin sincronización");
+  if(currentView==="datos") render();
+}
+
+async function gistPull(){
+  const g=await gistRequest("GET","/"+syncCfg.gistId);
+  const f=g.files&&g.files[GIST_FILE];
+  if(!f) return null;
+  let content=f.content;
+  if(f.truncated && f.raw_url){ content=await (await fetch(f.raw_url)).text(); }
+  try{ return JSON.parse(content); }catch(e){ return null; }
+}
+async function gistPush(){
+  await gistRequest("PATCH","/"+syncCfg.gistId,{
+    files:{[GIST_FILE]:{content:JSON.stringify(data)}}
+  });
+  syncCfg.lastSync=Date.now();
+  saveSync();
+}
+// Adopta datos remotos si son más nuevos que los locales.
+function adoptRemote(remote){
+  if(remote && typeof remote==="object" && remote.grupos && remote.movimientos){
+    if((remote.updatedAt||0) > (data.updatedAt||0)){
+      data=remote;
+      save({remote:true});
+      if(document.getElementById("content")) render();
+      return true;
+    }
+  }
+  return false;
+}
+
+// Sincronización completa: baja, resuelve por timestamp, y sube si local es más nuevo.
+async function syncNow(){
+  if(!syncCfg.token||!syncCfg.gistId){ setSyncState("off","Sin sincronización"); return; }
+  setSyncState("syncing","Sincronizando…");
+  try{
+    const remote=await gistPull();
+    const adopted=remote?adoptRemote(remote):false;
+    if(!adopted && (!remote || (data.updatedAt||0) >= (remote.updatedAt||0))){
+      await gistPush();
+    }
+    setSyncState("ok","Sincronizado");
+  }catch(e){
+    setSyncState("error",e.message);
+  }
+}
+// Push automático (con debounce) tras cada cambio local.
+function scheduleSyncPush(){
+  if(!syncEnabled()) return;
+  setSyncState("syncing","Guardando en la nube…");
+  clearTimeout(pushTimer);
+  pushTimer=setTimeout(async()=>{
+    try{ await gistPush(); setSyncState("ok","Sincronizado"); }
+    catch(e){ setSyncState("error",e.message); }
+  },1500);
+}
+function setSyncState(st,msg){
+  syncState=st; syncMsg=msg||"";
+  updateSyncBadge();
+  const el=document.getElementById("syncStatusLine");
+  if(el) el.innerHTML=syncStatusHTML();
+}
+function syncBadgeText(){
+  if(!syncCfg.token) return "☁️ Sin sincronizar";
+  return {idle:"☁️ Nube",syncing:"🔄 Sincronizando…",ok:"✅ Sincronizado",error:"⚠️ Error de sync",off:"☁️ Sin sincronizar"}[syncState]||"☁️ Nube";
+}
+function updateSyncBadge(){
+  const b=document.getElementById("syncBadge");
+  if(b) b.textContent=syncBadgeText();
+}
+function syncStatusHTML(){
+  if(!syncCfg.token) return '<span class="muted">No configurada. Conectá tu GitHub para sincronizar entre dispositivos.</span>';
+  const last=syncCfg.lastSync?("Última: "+new Date(syncCfg.lastSync).toLocaleString("es-AR")):"";
+  const color=syncState==="error"?"var(--red)":syncState==="ok"?"var(--green)":"var(--muted)";
+  return `<span style="color:${color}">${esc(syncBadgeText())}${syncMsg?(" · "+esc(syncMsg)):""}</span> <span class="muted">${esc(last)}</span>`;
 }
 
 /* ============================================================
@@ -1126,6 +1305,30 @@ function renderDatos(c){
       </div>
     </div>
     <div class="card mt">
+      <div class="section-title">☁️ Sincronización en la nube (GitHub Gist privado)</div>
+      <p class="hint mb" id="syncStatusLine">${syncStatusHTML()}</p>
+      ${syncCfg.token?`
+        <div class="flex wrap" style="gap:10px;margin-bottom:12px">
+          <button class="btn green" id="syncNowBtn">🔄 Sincronizar ahora</button>
+          <button class="btn ghost" id="syncCopyId">📋 Copiar ID del gist</button>
+          <button class="btn red" id="syncDisc">Desconectar</button>
+        </div>
+        <label class="flex" style="gap:8px;cursor:pointer"><input type="checkbox" id="syncAuto" ${syncCfg.auto!==false?"checked":""} style="width:auto"> Sincronizar automáticamente al guardar</label>
+        <p class="hint mt">Gist ID: <b>${esc(syncCfg.gistId||"—")}</b> · Para conectar <b>otro dispositivo</b>: instalá la app ahí, pegá el <b>mismo token</b> y este <b>mismo Gist ID</b>.</p>
+      `:`
+        <ol class="hint" style="margin:0 0 12px 18px;line-height:1.8">
+          <li>Entrá a <b>github.com → Settings → Developer settings → Personal access tokens → Tokens (classic)</b>.</li>
+          <li>Generá un token con <b>solo el permiso "gist"</b> tildado.</li>
+          <li>Copialo y pegalo acá abajo. Dejá el Gist ID vacío la primera vez (se crea solo).</li>
+          <li>En el <b>segundo dispositivo</b>, pegá el mismo token y el Gist ID que aparecerá acá.</li>
+        </ol>
+        <div class="field"><label>Token de GitHub (classic, permiso "gist")</label><input type="password" id="syncToken" placeholder="ghp_..."></div>
+        <div class="field"><label>Gist ID (opcional — vacío en el primer dispositivo)</label><input id="syncGistId" placeholder="Se genera automáticamente"></div>
+        <button class="btn green" id="syncConnectBtn">🔗 Conectar y sincronizar</button>
+      `}
+      <p class="hint mt">🔒 El token queda guardado solo en este dispositivo (no se sube ni se incluye en los backups). Los datos van a un <b>gist privado</b> que solo vos ves.</p>
+    </div>
+    <div class="card mt">
       <div class="section-title">⚙️ Configuración</div>
       <div class="row2">
         <div class="field"><label>Moneda</label><input id="cfgMoneda" value="${esc(data.configuracion.moneda||"ARS")}"></div>
@@ -1142,6 +1345,26 @@ function renderDatos(c){
   box.querySelector("#expExcel").onclick=openExcelModal;
   box.querySelector("#expMonth").onclick=()=>exportCSV(selectedMonth);
   box.querySelector("#expAll").onclick=()=>exportCSV(null);
+
+  // Sincronización
+  const connectBtn=box.querySelector("#syncConnectBtn");
+  if(connectBtn) connectBtn.onclick=async()=>{
+    const token=box.querySelector("#syncToken").value;
+    if(!token.trim()){alert("Pegá tu token de GitHub.");return;}
+    connectBtn.disabled=true; connectBtn.textContent="Conectando…";
+    const ok=await syncConnect(token, box.querySelector("#syncGistId").value);
+    connectBtn.disabled=false;
+    if(ok){ alert("¡Sincronización activada! Guardá este Gist ID para tu otro dispositivo:\n\n"+syncCfg.gistId); render(); }
+    else { connectBtn.textContent="🔗 Conectar y sincronizar"; alert("No se pudo conectar. Revisá el token/permiso. Detalle: "+syncMsg); }
+  };
+  const nowBtn=box.querySelector("#syncNowBtn");
+  if(nowBtn) nowBtn.onclick=async()=>{ nowBtn.disabled=true; await syncNow(); nowBtn.disabled=false; };
+  const discBtn=box.querySelector("#syncDisc");
+  if(discBtn) discBtn.onclick=()=>{ if(confirm("¿Desconectar la sincronización en este dispositivo? Los datos locales quedan intactos.")) syncDisconnect(); };
+  const autoChk=box.querySelector("#syncAuto");
+  if(autoChk) autoChk.onchange=()=>{ syncCfg.auto=autoChk.checked; saveSync(); updateSyncBadge(); };
+  const copyId=box.querySelector("#syncCopyId");
+  if(copyId) copyId.onclick=()=>{ navigator.clipboard&&navigator.clipboard.writeText(syncCfg.gistId||""); copyId.textContent="✅ Copiado"; setTimeout(()=>copyId.textContent="📋 Copiar ID del gist",1500); };
   box.querySelector("#backup").onclick=doBackup;
   box.querySelector("#restoreFile").onchange=doRestore;
   box.querySelector("#saveCfg").onclick=()=>{
@@ -1378,8 +1601,32 @@ window.addEventListener("resize",()=>{
   if(["dashboard","comparar","anual"].includes(currentView)) render();
 });
 
-/* Init */
+/* ============================================================
+   Init + PWA + sync inicial
+   ============================================================ */
 setView("dashboard");
+
+// Estado inicial de sincronización + pull al abrir
+if(syncCfg.token && syncCfg.gistId){
+  setSyncState("syncing","Sincronizando…");
+  syncNow();
+}else{
+  setSyncState(syncCfg.token?"idle":"off","");
+}
+updateSyncBadge();
+
+// Re-sincronizar al volver a la app (cambiar de pestaña / reabrir en el celu)
+document.addEventListener("visibilitychange",()=>{
+  if(document.visibilityState==="visible" && syncCfg.token && syncCfg.gistId) syncNow();
+});
+window.addEventListener("online",()=>{ if(syncCfg.token && syncCfg.gistId) syncNow(); });
+
+// Service worker (solo cuando está servido por http/https; en file:// se ignora)
+if("serviceWorker" in navigator && location.protocol.startsWith("http")){
+  window.addEventListener("load",()=>{
+    navigator.serviceWorker.register("sw.js").catch(err=>console.warn("SW no registrado:",err));
+  });
+}
 </script>
 </body>
 </html>
