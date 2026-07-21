@@ -552,10 +552,13 @@ function drawBars(canvas, groups, series, opts){
   // groups: labels[]; series: [{name,color,values[]}]
   opts=opts||{};
   const dpr=window.devicePixelRatio||1;
-  const W=opts.width||canvas.clientWidth||600, H=opts.height||260;
-  canvas.width=W*dpr;canvas.height=H*dpr;
+  const H=opts.height||260;
+  // Primero fijamos el tamaño CSS y recién ahí medimos el ancho real
+  // (si no, el canvas se dibuja chico y CSS lo estira → borroso y desproporcionado).
   canvas.style.width="100%";canvas.style.height=H+"px";
-  const ctx=canvas.getContext("2d");ctx.scale(dpr,dpr);
+  const W=opts.width||canvas.clientWidth||canvas.getBoundingClientRect().width||600;
+  canvas.width=Math.round(W*dpr);canvas.height=Math.round(H*dpr);
+  const ctx=canvas.getContext("2d");ctx.setTransform(dpr,0,0,dpr,0,0);
   ctx.clearRect(0,0,W,H);
   const padL=54,padR=14,padT=14,padB=40;
   const plotW=W-padL-padR, plotH=H-padT-padB;
@@ -595,10 +598,11 @@ function drawBars(canvas, groups, series, opts){
 function drawLines(canvas, labels, series, opts){
   opts=opts||{};
   const dpr=window.devicePixelRatio||1;
-  const W=opts.width||canvas.clientWidth||600, H=opts.height||280;
-  canvas.width=W*dpr;canvas.height=H*dpr;
+  const H=opts.height||280;
   canvas.style.width="100%";canvas.style.height=H+"px";
-  const ctx=canvas.getContext("2d");ctx.scale(dpr,dpr);
+  const W=opts.width||canvas.clientWidth||canvas.getBoundingClientRect().width||600;
+  canvas.width=Math.round(W*dpr);canvas.height=Math.round(H*dpr);
+  const ctx=canvas.getContext("2d");ctx.setTransform(dpr,0,0,dpr,0,0);
   ctx.clearRect(0,0,W,H);
   const padL=56,padR=14,padT=14,padB=34;
   const plotW=W-padL-padR, plotH=H-padT-padB;
