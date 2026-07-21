@@ -522,22 +522,32 @@ function subById(g,id){ return g && g.subgrupos.find(s=>s.id===id); }
 function calcMonth(ym){
   const movs = data.movimientos.filter(m=>m.mes===ym);
   const r = {
-    personal:{ing:0,egr:0}, negocio:{ing:0,egr:0},
-    porGrupo:{} // id -> {ing,egr,tipo}
+    personal:{ing:0,egr:0,gan:0}, negocio:{ing:0,egr:0,gan:0},
+    porGrupo:{} // id -> {ing,egr,gan,tipo}
   };
   movs.forEach(m=>{
     const g = grupoById(m.grupoId);
     const tipo = g ? g.tipo : "Personal";
     const monto = Number(m.monto||0);
-    if(!r.porGrupo[m.grupoId]) r.porGrupo[m.grupoId]={ing:0,egr:0,tipo};
-    if(m.tipo==="Ingreso"){ r.porGrupo[m.grupoId].ing+=monto; r[tipo==="Negocio"?"negocio":"personal"].ing+=monto; }
-    else { r.porGrupo[m.grupoId].egr+=monto; r[tipo==="Negocio"?"negocio":"personal"].egr+=monto; }
+    const ambito = tipo==="Negocio"?"negocio":"personal";
+    if(!r.porGrupo[m.grupoId]) r.porGrupo[m.grupoId]={ing:0,egr:0,gan:0,tipo};
+    if(m.tipo==="Ingreso"){
+      const gan = Math.min(Number(m.ganancia||0), monto);
+      r.porGrupo[m.grupoId].ing+=monto;
+      r.porGrupo[m.grupoId].gan+=gan;
+      r[ambito].ing+=monto;
+      r[ambito].gan+=gan;
+    }else{
+      r.porGrupo[m.grupoId].egr+=monto;
+      r[ambito].egr+=monto;
+    }
   });
   r.personalBalance = r.personal.ing - r.personal.egr;
   // negocio: resultado neto = ingresos - egresos
   r.negocioNeto = r.negocio.ing - r.negocio.egr;
   r.totalIngresos = r.personal.ing + r.negocio.ing;
   r.totalEgresos = r.personal.egr + r.negocio.egr;
+  r.totalGanancia = r.personal.gan + r.negocio.gan;
   r.balanceGlobal = r.totalIngresos - r.totalEgresos;
   return r;
 }
@@ -733,7 +743,12 @@ function renderDashboard(c){
   wrap.innerHTML=`
     <div class="flex between wrap mb">
       <div class="section-title" style="margin:0">📅 ${monthLabelLong(ym)}</div>
-      <div class="badge ${win?'win':'loss'}">${win?'🟢 Ganancia':'🔴 Pérdida'} ${fmt(Math.abs(r.balanceGlobal))}</div>
+      <div class="badge ${win?'win':'loss'}">${win?'🟢 Positivo':'🔴 Negativo'} ${fmt(Math.abs(r.balanceGlobal))}</div>
+    </div>
+    <div class="grid g3 mb">
+      <div class="stat"><div class="lbl">💰 Ingresos</div><div class="val pos">${fmt(r.totalIngresos)}</div><div class="sub">Ingreso base: ${fmt(r.totalIngresos - r.totalGanancia)}</div></div>
+      <div class="stat"><div class="lbl">📈 Ganancia</div><div class="val" style="color:#0891b2">${fmt(r.totalGanancia)}</div><div class="sub">Incluida en los ingresos</div></div>
+      <div class="stat"><div class="lbl">💸 Egresos</div><div class="val neg">${fmt(r.totalEgresos)}</div><div class="sub">Balance: ${fmt(r.balanceGlobal)}</div></div>
     </div>
     <div class="grid g2">
       <div class="card">
@@ -881,7 +896,7 @@ function drawMovTable(){
       <td>${g?esc((g.icono||"")+" "+g.nombre):'<span class="muted">?</span>'} <span class="pill ${g&&g.tipo==='Negocio'?'neg2':'per'}" style="margin-left:4px">${g?g.tipo:''}</span></td>
       <td>${s?esc(s.nombre):'<span class="muted">—</span>'}</td>
       <td>${esc(m.concepto||"")}${m.detalle?`<div class="hint">${esc(m.detalle)}</div>`:""}</td>
-      <td class="num ${m.tipo==="Ingreso"?"pos":"neg"}">${m.tipo==="Ingreso"?"+":"−"}${fmt(m.monto)}</td>
+      <td class="num ${m.tipo==="Ingreso"?"pos":"neg"}">${m.tipo==="Ingreso"?"+":"−"}${fmt(m.monto)}${(m.tipo==="Ingreso"&&Number(m.ganancia)>0)?`<div class="hint" style="color:#0891b2">📈 ganancia ${fmt(m.ganancia)}</div>`:""}</td>
       <td class="right nowrap">
         <button class="btn-icon" data-edit="${m.id}" title="Editar">✏️</button>
         <button class="btn-icon danger" data-del="${m.id}" title="Eliminar">🗑️</button>
@@ -910,6 +925,17 @@ function openMovModal(id){
       <div class="field"><label>Tipo</label><select id="mTipo"><option ${m.tipo==="Ingreso"?"selected":""}>Ingreso</option><option ${m.tipo==="Egreso"?"selected":""}>Egreso</option></select></div>
       <div class="field"><label>Monto</label><input type="number" step="0.01" id="mMonto" value="${esc(m.monto)}" placeholder="0.00"></div>
     </div>
+    <div class="field" id="mGananciaWrap">
+      <label>📈 Ganancia (cuánto del ingreso es ganancia)</label>
+      <div class="flex" style="gap:8px">
+        <input type="number" step="0.01" id="mGanancia" value="${esc(m.gananciaValor!=null?m.gananciaValor:"")}" placeholder="0" style="flex:1">
+        <select id="mGananciaModo" style="width:90px">
+          <option value="monto" ${m.gananciaModo!=="pct"?"selected":""}>$</option>
+          <option value="pct" ${m.gananciaModo==="pct"?"selected":""}>%</option>
+        </select>
+      </div>
+      <div class="hint" id="mGananciaHint"></div>
+    </div>
     <div class="field"><label>Categoría</label><select id="mGrupo"></select></div>
     <div class="field"><label>Subcategoría</label><select id="mSub"></select></div>
     <div class="field"><label>Concepto / descripción</label><input id="mConcepto" value="${esc(m.concepto)}" placeholder="Ej: Compra semanal"></div>
@@ -935,22 +961,65 @@ function openMovModal(id){
   }
   fillGroups();fillSubs();
   gSel.onchange=fillSubs;
+
+  // --- Ganancia: solo aplica a Ingreso ---
+  const tipoSel=document.getElementById("mTipo");
+  const ganWrap=document.getElementById("mGananciaWrap");
+  const ganInput=document.getElementById("mGanancia");
+  const ganModo=document.getElementById("mGananciaModo");
+  const ganHint=document.getElementById("mGananciaHint");
+  const montoInput=document.getElementById("mMonto");
+  // Calcula el monto absoluto de ganancia según el modo ($ o %)
+  function calcGanancia(){
+    const monto=parseFloat(montoInput.value)||0;
+    const val=parseFloat(ganInput.value)||0;
+    let g = ganModo.value==="pct" ? monto*val/100 : val;
+    if(g<0) g=0;
+    if(g>monto) g=monto; // la ganancia no puede superar al ingreso
+    return g;
+  }
+  function updateGan(){
+    const esIngreso = tipoSel.value==="Ingreso";
+    ganWrap.style.display = esIngreso ? "" : "none";
+    if(esIngreso){
+      const monto=parseFloat(montoInput.value)||0;
+      const g=calcGanancia();
+      ganHint.textContent = monto>0
+        ? `De ${fmt(monto)}: ganancia ${fmt(g)} · ingreso base ${fmt(monto-g)}`
+        : "Ingresá el monto y cuánto de eso es ganancia.";
+    }
+  }
+  tipoSel.addEventListener("change",updateGan);
+  ganInput.addEventListener("input",updateGan);
+  ganModo.addEventListener("change",updateGan);
+  montoInput.addEventListener("input",updateGan);
+  updateGan();
+
   document.getElementById("saveMov").onclick=()=>{
+    const tipo=tipoSel.value;
     const rec={
       id: editing?editing.id:uid(),
       fecha: document.getElementById("mFecha").value,
       mes: document.getElementById("mMes").value,
-      tipo: document.getElementById("mTipo").value,
+      tipo,
       grupoId: gSel.value,
       subgrupoId: sSel.value,
       concepto: document.getElementById("mConcepto").value.trim(),
       detalle: document.getElementById("mDetalle").value.trim(),
-      monto: parseFloat(document.getElementById("mMonto").value)||0
+      monto: parseFloat(montoInput.value)||0
     };
     if(!rec.grupoId){alert("Elegí una categoría.");return;}
     if(!rec.mes){alert("Indicá el mes/año.");return;}
     if(!rec.monto||rec.monto<=0){alert("Ingresá un monto válido.");return;}
     if(!rec.fecha) rec.fecha=rec.mes+"-01";
+    // Ganancia solo para Ingreso
+    if(tipo==="Ingreso"){
+      rec.gananciaModo=ganModo.value;
+      rec.gananciaValor=parseFloat(ganInput.value)||0;
+      rec.ganancia=calcGanancia();
+    }else{
+      rec.gananciaModo="monto"; rec.gananciaValor=0; rec.ganancia=0;
+    }
     if(editing){ Object.assign(editing,rec); }
     else data.movimientos.push(rec);
     save();closeModal();
@@ -1432,11 +1501,12 @@ function csvCell(v){
 function exportCSV(ym){
   const movs=(ym?data.movimientos.filter(m=>m.mes===ym):data.movimientos.slice())
     .sort((a,b)=>(a.mes<b.mes?-1:a.mes>b.mes?1:(a.fecha<b.fecha?-1:1)));
-  const header=["Mes","Fecha","Tipo","Ámbito","Categoría","Subcategoría","Concepto","Detalle","Monto"];
+  const header=["Mes","Fecha","Tipo","Ámbito","Categoría","Subcategoría","Concepto","Detalle","Monto","Ganancia"];
   const lines=[header.join(";")];
   movs.forEach(m=>{
     const g=grupoById(m.grupoId);const s=subById(g,m.subgrupoId);
-    lines.push([m.mes,m.fecha,m.tipo,g?g.tipo:"",g?g.nombre:"",s?s.nombre:"",m.concepto,m.detalle,fmtNum(m.monto)].map(csvCell).join(";"));
+    const gan=m.tipo==="Ingreso"?Number(m.ganancia||0):0;
+    lines.push([m.mes,m.fecha,m.tipo,g?g.tipo:"",g?g.nombre:"",s?s.nombre:"",m.concepto,m.detalle,fmtNum(m.monto),fmtNum(gan)].map(csvCell).join(";"));
   });
   downloadFile((ym?("movimientos_"+ym):"movimientos_historial")+".csv",lines.join("\n"),"text/csv;charset=utf-8");
 }
@@ -1511,7 +1581,7 @@ function zipStore(files){
 }
 function colName(i){ let s="";i++;while(i>0){const m=(i-1)%26;s=String.fromCharCode(65+m)+s;i=Math.floor((i-1)/26);}return s; }
 function exportXLSX(movs,label){
-  const headers=["Mes","Fecha","Tipo","Ámbito","Categoría","Subcategoría","Concepto","Detalle","Ingreso","Egreso"];
+  const headers=["Mes","Fecha","Tipo","Ámbito","Categoría","Subcategoría","Concepto","Detalle","Ingreso","Egreso","Ganancia"];
   const cell=(col,row,val,style,isNum)=>{
     const ref=colName(col)+row, s=style?` s="${style}"`:"";
     return isNum ? `<c r="${ref}"${s}><v>${val}</v></c>`
@@ -1520,12 +1590,13 @@ function exportXLSX(movs,label){
   const rows=[];
   let hc=""; headers.forEach((h,i)=>hc+=cell(i,1,h,1,false));
   rows.push(`<row r="1">${hc}</row>`);
-  let totIng=0,totEgr=0;
+  let totIng=0,totEgr=0,totGan=0;
   movs.forEach((m,idx)=>{
     const r=idx+2, g=grupoById(m.grupoId), sub=subById(g,m.subgrupoId);
     const ing=m.tipo==="Ingreso"?Number(m.monto||0):null;
     const egr=m.tipo==="Egreso"?Number(m.monto||0):null;
-    if(ing!=null)totIng+=ing; if(egr!=null)totEgr+=egr;
+    const gan=m.tipo==="Ingreso"?Number(m.ganancia||0):null;
+    if(ing!=null)totIng+=ing; if(egr!=null)totEgr+=egr; if(gan!=null)totGan+=gan;
     let cc="";
     cc+=cell(0,r,m.mes||"",0,false);
     cc+=cell(1,r,m.fecha||"",0,false);
@@ -1537,14 +1608,15 @@ function exportXLSX(movs,label){
     cc+=cell(7,r,m.detalle||"",0,false);
     if(ing!=null) cc+=cell(8,r,ing,2,true);
     if(egr!=null) cc+=cell(9,r,egr,2,true);
+    if(gan!=null) cc+=cell(10,r,gan,2,true);
     rows.push(`<row r="${r}">${cc}</row>`);
   });
   const tr=movs.length+2;
-  let tc=cell(7,tr,"TOTALES",4,false)+cell(8,tr,totIng,3,true)+cell(9,tr,totEgr,3,true);
+  let tc=cell(7,tr,"TOTALES",4,false)+cell(8,tr,totIng,3,true)+cell(9,tr,totEgr,3,true)+cell(10,tr,totGan,3,true);
   rows.push(`<row r="${tr}">${tc}</row>`);
   const lastData=Math.max(1,movs.length+1);
   const sheet=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><cols><col min="1" max="1" width="10"/><col min="2" max="2" width="12"/><col min="3" max="3" width="9"/><col min="4" max="4" width="11"/><col min="5" max="5" width="22"/><col min="6" max="6" width="18"/><col min="7" max="7" width="28"/><col min="8" max="8" width="26"/><col min="9" max="9" width="15"/><col min="10" max="10" width="15"/></cols><sheetData>${rows.join("")}</sheetData><autoFilter ref="A1:J${lastData}"/></worksheet>`;
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><cols><col min="1" max="1" width="10"/><col min="2" max="2" width="12"/><col min="3" max="3" width="9"/><col min="4" max="4" width="11"/><col min="5" max="5" width="22"/><col min="6" max="6" width="18"/><col min="7" max="7" width="28"/><col min="8" max="8" width="26"/><col min="9" max="9" width="15"/><col min="10" max="10" width="15"/><col min="11" max="11" width="15"/></cols><sheetData>${rows.join("")}</sheetData><autoFilter ref="A1:K${lastData}"/></worksheet>`;
   const contentTypes=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`;
   const rels=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
