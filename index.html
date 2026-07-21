@@ -1605,10 +1605,12 @@ function buildAnnualSection(ym){
         <td class="num ${tIng-tEgr>=0?'pos':'neg'}">${fmt(tIng-tEgr)}</td>
       </tr></tfoot>
     </table></div>`;
-  // el canvas necesita estar en el DOM para medir su ancho
+  // el canvas necesita estar en el DOM para medir su ancho.
+  // Barras agrupadas (Ingresos/Egresos por mes): se ven bien con datos
+  // escasos o con el año completo, sin los picos feos del gráfico de líneas.
   setTimeout(()=>{
     const cv=document.getElementById("annualChart");
-    if(cv) drawLines(cv,mesNombres,[
+    if(cv) drawBars(cv,mesNombres,[
       {name:"Ingresos",color:"#16a34a",values:rows.map(r=>r.totalIngresos)},
       {name:"Egresos",color:"#dc2626",values:rows.map(r=>r.totalEgresos)}
     ],{height:280});
