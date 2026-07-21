@@ -509,12 +509,6 @@ function renderDashboard(c){
       <div class="section-title" style="margin:0">📅 ${monthLabelLong(ym)}</div>
       <div class="badge ${win?'win':'loss'}">${win?'🟢 Ganancia':'🔴 Pérdida'} ${fmt(Math.abs(r.balanceGlobal))}</div>
     </div>
-    <div class="grid g4 mb">
-      <div class="stat"><div class="lbl">👤 Total personal (egresos)</div><div class="val">${fmt(r.personal.egr)}</div><div class="sub">Ingresos: ${fmt(r.personal.ing)}</div></div>
-      <div class="stat"><div class="lbl">🏢 Resultado negocio</div><div class="val ${r.negocioNeto>=0?'pos':'neg'}">${fmt(r.negocioNeto)}</div><div class="sub">Ventas: ${fmt(r.negocio.ing)}</div></div>
-      <div class="stat"><div class="lbl">⚖️ Balance global</div><div class="val ${win?'pos':'neg'}">${fmt(r.balanceGlobal)}</div><div class="sub">Ing ${fmt(r.totalIngresos)} · Egr ${fmt(r.totalEgresos)}</div></div>
-      <div class="stat"><div class="lbl">💵 Ingresos del mes</div><div class="val pos">${fmt(r.totalIngresos)}</div><div class="sub">Egresos totales: ${fmt(r.totalEgresos)}</div></div>
-    </div>
     <div class="grid g2">
       <div class="card">
         <div class="section-title">🥧 Ingresos vs Egresos del mes</div>
