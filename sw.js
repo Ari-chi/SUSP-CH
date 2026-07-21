@@ -1,7 +1,7 @@
 /* Service worker: cachea el "shell" de la app para que funcione offline.
    Los datos NO se cachean acá: viven en localStorage y se sincronizan
    contra api.github.com (que siempre va a la red). */
-const CACHE = "finanzas-v4";
+const CACHE = "finanzas-v5";
 const ASSETS = [
   "./",
   "./index.html",
@@ -35,7 +35,24 @@ self.addEventListener("fetch", (e) => {
   // La API de GitHub (sincronización) siempre va a la red, nunca al cache.
   if (url.hostname === "api.github.com" || url.hostname === "gist.githubusercontent.com") return;
 
-  // App shell: cache-first, con actualización en segundo plano.
+  // El HTML de la app: NETWORK-FIRST → siempre trae la última versión cuando
+  // hay internet, y usa el cache solo si estás offline. Así se actualiza sola.
+  const isDoc = req.mode === "navigate" || req.destination === "document" ||
+                url.pathname.endsWith("/") || url.pathname.endsWith(".html");
+  if (isDoc) {
+    e.respondWith(
+      fetch(req)
+        .then((resp) => {
+          const copy = resp.clone();
+          caches.open(CACHE).then((c) => c.put(req, copy));
+          return resp;
+        })
+        .catch(() => caches.match(req).then((c) => c || caches.match("./index.html")))
+    );
+    return;
+  }
+
+  // Resto de archivos (íconos, manifest): cache-first con actualización de fondo.
   e.respondWith(
     caches.match(req).then((cached) => {
       const network = fetch(req)
