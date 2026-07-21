@@ -155,17 +155,19 @@
   .right{text-align:right}
   .nowrap{white-space:nowrap}
   .hamburger{display:none;background:none;border:none;color:var(--text);font-size:22px;cursor:pointer;width:auto}
-  /* Botón flotante de sincronización: fijo, siempre visible sobre todo */
-  #syncFab{
-    position:fixed;right:20px;bottom:20px;z-index:200;width:auto;
+  /* Botones flotantes: fijos, siempre visibles sobre todo */
+  .fab{
+    position:fixed;right:20px;z-index:200;width:auto;
     display:inline-flex;align-items:center;gap:8px;
-    background:var(--accent);color:#fff;border:none;border-radius:30px;
+    color:#fff;border:none;border-radius:30px;
     padding:15px 22px;font-size:16px;font-weight:700;cursor:pointer;
     box-shadow:0 6px 20px rgba(16,24,40,.28);
     transition:transform .12s, background .2s;
   }
-  #syncFab:hover{transform:translateY(-2px)}
-  #syncFab:active{transform:translateY(0)}
+  .fab:hover{transform:translateY(-2px)}
+  .fab:active{transform:translateY(0)}
+  #excelFab{bottom:84px;background:#217346}      /* verde Excel, arriba */
+  #syncFab{bottom:20px;background:var(--accent)} /* sincronizar, abajo */
   #syncFab.state-ok{background:var(--green)}
   #syncFab.state-error{background:var(--red)}
   #syncFab.state-syncing{background:var(--accent)}
@@ -174,7 +176,9 @@
   #syncFab.spin #syncFabIcon{animation:fabspin 1s linear infinite}
   @keyframes fabspin{to{transform:rotate(360deg)}}
   @media(max-width:560px){
-    #syncFab{right:14px;bottom:calc(14px + env(safe-area-inset-bottom,0px));padding:15px 20px;font-size:15px}
+    .fab{right:14px;padding:14px 18px;font-size:14px}
+    #syncFab{bottom:calc(14px + env(safe-area-inset-bottom,0px))}
+    #excelFab{bottom:calc(72px + env(safe-area-inset-bottom,0px))}
   }
   @media(max-width:900px){
     .sidebar{position:fixed;z-index:60;transform:translateX(-100%);transition:transform .2s}
@@ -233,8 +237,9 @@
   </main>
 </div>
 
-<!-- Botón flotante de sincronización: siempre visible en cualquier vista -->
-<button id="syncFab" title="Sincronizar ahora"><span id="syncFabIcon">🔄</span> <span id="syncFabText">Sincronizar</span></button>
+<!-- Botones flotantes: siempre visibles en cualquier vista -->
+<button id="excelFab" class="fab" title="Descargar a Excel">📊 <span>Excel</span></button>
+<button id="syncFab" class="fab" title="Sincronizar ahora"><span id="syncFabIcon">🔄</span> <span id="syncFabText">Sincronizar</span></button>
 
 <!-- Modal generic -->
 <div class="overlay" id="overlay">
@@ -1702,6 +1707,8 @@ document.getElementById("syncFab").onclick=()=>{
   if(syncCfg.token && syncCfg.gistId){ syncNow(); }
   else { setView("datos"); }
 };
+// Botón flotante de Excel: abre el selector de período y descarga.
+document.getElementById("excelFab").onclick=openExcelModal;
 
 // Estado inicial de sincronización + pull al abrir
 if(syncCfg.token && syncCfg.gistId){

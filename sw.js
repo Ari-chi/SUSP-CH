@@ -1,7 +1,7 @@
 /* Service worker: cachea el "shell" de la app para que funcione offline.
    Los datos NO se cachean acá: viven en localStorage y se sincronizan
    contra api.github.com (que siempre va a la red). */
-const CACHE = "finanzas-v2";
+const CACHE = "finanzas-v3";
 const ASSETS = [
   "./",
   "./index.html",
