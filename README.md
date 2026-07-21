@@ -1,4 +1,4 @@
-# 💰 Finanzas · Personal + Negocio
+# 💰 Finanzas
 
 App de gestión financiera personal y de negocio, en un solo `index.html`, con:
 
