@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Finanzas</title>
 <meta name="theme-color" content="#2563eb">
+<meta name="color-scheme" content="light only">
 <meta name="description" content="Gestión financiera personal y de negocio, con sincronización en la nube.">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="mobile-web-app-capable" content="yes">
@@ -27,6 +28,9 @@
     --yellow:#ca8a04;
     --accent:#2563eb;
   }
+  /* Forzar siempre tema claro: evita que el "modo oscuro" del celu/navegador
+     invierta los colores de la app. */
+  :root{color-scheme:light only}
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{height:100%}
   body{
@@ -175,6 +179,9 @@
   #syncFabIcon{display:inline-block}
   #syncFab.spin #syncFabIcon{animation:fabspin 1s linear infinite}
   @keyframes fabspin{to{transform:rotate(360deg)}}
+  /* Ocultar botones flotantes mientras hay un formulario/modal abierto,
+     para que no tapen los botones Guardar/Cancelar. */
+  body.modal-open .fab{display:none}
   @media(max-width:560px){
     .fab{right:14px;padding:14px 18px;font-size:14px}
     #syncFab{bottom:calc(14px + env(safe-area-inset-bottom,0px))}
@@ -1682,10 +1689,12 @@ function openExcelModal(){
 function openModal(html){
   document.getElementById("modal").innerHTML=html;
   document.getElementById("overlay").classList.add("open");
+  document.body.classList.add("modal-open"); // oculta los botones flotantes
 }
 function closeModal(){
   document.getElementById("overlay").classList.remove("open");
   document.getElementById("modal").innerHTML="";
+  document.body.classList.remove("modal-open");
 }
 window.closeModal=closeModal;
 document.getElementById("overlay").addEventListener("click",e=>{if(e.target.id==="overlay")closeModal();});
